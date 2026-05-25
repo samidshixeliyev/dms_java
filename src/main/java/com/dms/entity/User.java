@@ -33,7 +33,7 @@ public class User {
     private Long executorId;
 
     @Column(name = "department_id")
-    private Long departmentId;
+    private Integer departmentId;
 
     @Column(name = "force_password_change")
     private boolean forcePasswordChange;

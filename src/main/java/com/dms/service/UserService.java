@@ -70,7 +70,7 @@ public class UserService {
             user.setExecutorId(data.get("executorId") != null ? Long.valueOf(data.get("executorId").toString()) : null);
         }
         if (data.containsKey("departmentId")) {
-            user.setDepartmentId(data.get("departmentId") != null ? Long.valueOf(data.get("departmentId").toString()) : null);
+            user.setDepartmentId(data.get("departmentId") != null ? Integer.valueOf(data.get("departmentId").toString()) : null);
         }
         if (data.get("password") != null && !data.get("password").toString().isBlank()) {
             AuthService.validatePasswordStrength(data.get("password").toString());

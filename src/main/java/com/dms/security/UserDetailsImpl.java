@@ -27,7 +27,7 @@ public class UserDetailsImpl implements UserDetails {
         this.role = user.getUserRole();
         this.mustChangePassword = user.isForcePasswordChange();
         this.executorId = user.getExecutorId();
-        this.departmentId = user.getDepartmentId();
+        this.departmentId = user.getDepartmentId() != null ? user.getDepartmentId().longValue() : null;
     }
 
     @Override
