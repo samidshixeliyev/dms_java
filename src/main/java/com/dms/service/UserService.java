@@ -50,7 +50,7 @@ public class UserService {
                 .email((String) data.get("email"))
                 .userRole((String) data.get("userRole"))
                 .executorId(data.get("executorId") != null ? Long.valueOf(data.get("executorId").toString()) : null)
-                .departmentId(data.get("departmentId") != null ? Long.valueOf(data.get("departmentId").toString()) : null)
+                .departmentId(data.get("departmentId") != null ? Integer.valueOf(data.get("departmentId").toString()) : null)
                 .forcePasswordChange(true)
                 .isDeleted(false)
                 .build();
