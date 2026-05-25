@@ -25,6 +25,11 @@ export default function Reports() {
 
   const handleFilter = () => loadReport(deptId || undefined)
 
+  const exportExcel = () => {
+    const params = deptId ? `?deptId=${deptId}` : ''
+    window.open(`/api/reports/export-excel${params}`, '_blank')
+  }
+
   const total = stats.reduce((s, r) => ({ total: s.total + r.total, executed: s.executed + r.executed }), { total: 0, executed: 0 })
 
   return (
@@ -50,6 +55,11 @@ export default function Reports() {
               <button className="btn btn-primary btn-sm" onClick={handleFilter} disabled={loading}>
                 {loading ? <span className="spinner-border spinner-border-sm" /> : <i className="bi bi-funnel" />}
                 Filtrə et
+              </button>
+            </div>
+            <div className="col-auto">
+              <button className="btn btn-success btn-sm" onClick={exportExcel}>
+                <i className="bi bi-file-earmark-excel" /> Excel
               </button>
             </div>
           </div>
@@ -89,13 +99,14 @@ export default function Reports() {
                 <th className="text-center">Gözləmədə</th>
                 <th className="text-center">Rədd edilib</th>
                 <th className="text-center">Davam edir</th>
+                <th className="text-center">Başlanmayıb</th>
                 <th className="text-center">Vaxtı keçmiş</th>
                 <th className="text-center">İcra faizi</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="text-center py-4">
+                <tr><td colSpan={10} className="text-center py-4">
                   <div className="spinner-border spinner-border-sm" />
                 </td></tr>
               ) : stats.map(row => (
@@ -107,6 +118,7 @@ export default function Reports() {
                   <td className="text-center text-warning">{row.pendingApproval}</td>
                   <td className="text-center text-danger">{row.rejected}</td>
                   <td className="text-center">{row.inProgress}</td>
+                  <td className="text-center text-muted">{row.notStarted}</td>
                   <td className="text-center text-danger">{row.overdue}</td>
                   <td className="text-center" style={{ minWidth: 100 }}>
                     <div className="progress-thin mb-1">
@@ -117,7 +129,7 @@ export default function Reports() {
                 </tr>
               ))}
               {!loading && stats.length === 0 && (
-                <tr><td colSpan={9} className="text-center text-muted py-4">Məlumat yoxdur</td></tr>
+                <tr><td colSpan={10} className="text-center text-muted py-4">Məlumat yoxdur</td></tr>
               )}
             </tbody>
           </table>

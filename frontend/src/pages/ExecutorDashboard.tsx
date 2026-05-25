@@ -4,8 +4,10 @@ import client from '../api/client'
 import toast from 'react-hot-toast'
 import type { LegalAct, ExecutionNote, PageResponse } from '../types'
 import { useEffect } from 'react'
+import { useAuth } from '../context/AuthContext'
 
 export default function ExecutorDashboard() {
+  const { user } = useAuth()
   const [selectedAct, setSelectedAct] = useState<LegalAct | null>(null)
   const [showStatusModal, setShowStatusModal] = useState(false)
   const [notes, setNotes] = useState<ExecutionNote[]>([])
@@ -14,6 +16,7 @@ export default function ExecutorDashboard() {
   const [files, setFiles] = useState<File[]>([])
   const [saving, setSaving] = useState(false)
   const [detail, setDetail] = useState<LegalAct | null>(null)
+  const [withdrawing, setWithdrawing] = useState<number | null>(null)
 
   useEffect(() => {
     client.get('/execution-notes').then(r => setNotes(r.data.data ?? []))
@@ -24,7 +27,8 @@ export default function ExecutorDashboard() {
     return res.data.data
   }, [])
 
-  const openStatusModal = (act: LegalAct) => {
+  const openStatusModal = (act: LegalAct, e: React.MouseEvent) => {
+    e.stopPropagation()
     setSelectedAct(act)
     setForm({ executionNoteId: '', customNote: '' })
     setFiles([])
@@ -51,8 +55,25 @@ export default function ExecutorDashboard() {
       toast.success('Status göndərildi')
       setShowStatusModal(false)
       setRefreshKey(k => k + 1)
+      if (detail?.id === selectedAct!.id) loadDetail(selectedAct!)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleWithdraw = async (act: LegalAct, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm('Gözləmədə olan statusu geri almaq istədiyinizə əminsiniz?')) return
+    setWithdrawing(act.id)
+    try {
+      await client.post(`/executor/legal-acts/${act.id}/withdraw-status`)
+      toast.success('Status geri alındı')
+      setRefreshKey(k => k + 1)
+      if (detail?.id === act.id) loadDetail(act)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Geri alma mümkün olmadı')
+    } finally {
+      setWithdrawing(null)
     }
   }
 
@@ -65,8 +86,30 @@ export default function ExecutorDashboard() {
     return <span className="badge bg-info">Qeyd var</span>
   }
 
+  const getMyRole = (act: LegalAct): string | null => {
+    if (!user?.executorId) return null
+    const link = act.executorLinks?.find(l => l.executorId === user.executorId)
+    return link?.role ?? null
+  }
+
+  const hasPendingOwnLog = (act: LegalAct): boolean => {
+    return !!(act.statusLogs?.[0]?.approvalStatus === 'pending')
+  }
+
   const columns = [
-    { header: 'Nömrə', render: (row: LegalAct) => <span className="fw-semibold">{row.legalActNumber}</span> },
+    {
+      header: 'Nömrə',
+      render: (row: LegalAct) => (
+        <span className="fw-semibold">
+          {row.legalActNumber}
+          {getMyRole(row) && (
+            <span className={`badge ms-2 ${getMyRole(row) === 'main' ? 'bg-primary' : 'bg-secondary'}`} style={{ fontSize: '.65rem' }}>
+              {getMyRole(row) === 'main' ? 'Əsas' : 'Köməkçi'}
+            </span>
+          )}
+        </span>
+      ),
+    },
     { header: 'Tarix', render: (row: LegalAct) => row.legalActDate?.substring(0, 10) },
     { header: 'Son tarix', render: (row: LegalAct) => row.executionDeadline?.substring(0, 10) ?? '-' },
     { header: 'Xülasə', render: (row: LegalAct) => <span title={row.summary ?? ''}>{row.summary?.substring(0, 60) ?? '-'}</span> },
@@ -75,10 +118,22 @@ export default function ExecutorDashboard() {
       header: '',
       render: (row: LegalAct) => (
         <div className="d-flex gap-1" onClick={e => e.stopPropagation()}>
-          <button className="btn btn-xs btn-outline-primary py-0 px-1" onClick={() => openStatusModal(row)}>
+          <button className="btn btn-xs btn-outline-primary py-0 px-1" onClick={e => openStatusModal(row, e)}>
             <i className="bi bi-send" /> Status
           </button>
-          <button className="btn btn-xs btn-outline-secondary py-0 px-1" onClick={() => loadDetail(row)}>
+          {hasPendingOwnLog(row) && (
+            <button
+              className="btn btn-xs btn-outline-warning py-0 px-1"
+              onClick={e => handleWithdraw(row, e)}
+              disabled={withdrawing === row.id}
+              title="Geri al"
+            >
+              {withdrawing === row.id
+                ? <span className="spinner-border spinner-border-sm" />
+                : <i className="bi bi-arrow-counterclockwise" />}
+            </button>
+          )}
+          <button className="btn btn-xs btn-outline-secondary py-0 px-1" onClick={e => { e.stopPropagation(); loadDetail(row) }}>
             <i className="bi bi-eye" />
           </button>
         </div>
@@ -97,14 +152,14 @@ export default function ExecutorDashboard() {
       <div className="row g-3">
         <div className={detail ? 'col-md-7' : 'col-12'}>
           <div className="card">
-            <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} />
+            <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} onRowClick={loadDetail} />
           </div>
         </div>
 
         {detail && (
           <div className="col-md-5">
             <div className="card">
-              <div className="card-header">
+              <div className="card-header d-flex justify-content-between align-items-center">
                 <span>Tapşırıq #{detail.legalActNumber}</span>
                 <button
                   style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.1rem', padding: 0 }}
@@ -125,7 +180,30 @@ export default function ExecutorDashboard() {
                       ? <span className="badge badge-pending">Tələb olunur</span>
                       : <span className="badge badge-executed">Tələb yoxdur</span>}
                   </dd>
+                  {detail.summary && (
+                    <>
+                      <dt className="col-5 text-muted fw-semibold">Xülasə</dt>
+                      <dd className="col-7 mb-0">{detail.summary}</dd>
+                    </>
+                  )}
                 </dl>
+
+                {detail.executorLinks && detail.executorLinks.length > 0 && (
+                  <>
+                    <div className="fw-bold mb-2 mt-2" style={{ fontSize: '.82rem', color: 'var(--primary)' }}>İcraçılar</div>
+                    <ul className="list-unstyled small mb-3">
+                      {detail.executorLinks.map(lnk => (
+                        <li key={lnk.id} className="d-flex align-items-center gap-2 mb-1">
+                          <span className={`badge ${lnk.role === 'main' ? 'bg-primary' : 'bg-secondary'}`}>
+                            {lnk.role === 'main' ? 'Əsas' : 'Köməkçi'}
+                          </span>
+                          <span>{lnk.executor?.name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+
                 {detail.taskDescription && (
                   <p className="small text-muted" style={{ whiteSpace: 'pre-wrap' }}>{detail.taskDescription}</p>
                 )}
@@ -188,7 +266,7 @@ export default function ExecutorDashboard() {
               <div className="modal-body">
                 {selectedAct.proofRequired && (
                   <div className="alert alert-warning small">
-                    <i className="bi bi-exclamation-triangle-fill" />
+                    <i className="bi bi-exclamation-triangle-fill me-1" />
                     Bu tapşırıq üçün "İcra olunub" seçərkən sənəd yükləmək <strong>məcburidir</strong>.
                   </div>
                 )}

@@ -13,8 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,22 +26,44 @@ public class ExecutorDashboardService {
     private final ExecutorStatusLogRepository statusLogRepository;
     private final ExecutionAttachmentRepository attachmentRepository;
     private final ExecutionNoteRepository executionNoteRepository;
+    private final ExecutorRepository executorRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final DepartmentHierarchyService hierarchyService;
 
     public PageResponse<LegalAct> listTasks(UserDetailsImpl user, int page, int size) {
-        if (user.getExecutorId() == null) {
-            throw new AppException("Bu hesab icraçıya bağlı deyil", HttpStatus.FORBIDDEN);
-        }
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return PageResponse.from(
+
+        // executor role: show only their own acts
+        if (user.getExecutorId() != null) {
+            return PageResponse.from(
                 legalActRepository.findByExecutorIds(Set.of(user.getExecutorId()), pageable));
+        }
+
+        // manager/admin/user: show acts for executors in their visible departments
+        Set<Long> visibleDepts;
+        if (user.getRole().equals("admin")) {
+            visibleDepts = null; // all
+        } else if (user.getDepartmentId() != null) {
+            visibleDepts = hierarchyService.selfAndDescendantIds(user.getDepartmentId());
+        } else {
+            throw new AppException("Bu hesab üçün tapşırıq görünüşü mövcud deyil", HttpStatus.FORBIDDEN);
+        }
+
+        List<Executor> executors = visibleDepts != null
+            ? executorRepository.findByDepartmentIds(visibleDepts)
+            : executorRepository.findAllActive();
+
+        if (executors.isEmpty()) {
+            return PageResponse.empty();
+        }
+
+        Set<Long> executorIds = executors.stream().map(Executor::getId).collect(Collectors.toSet());
+        return PageResponse.from(legalActRepository.findByExecutorIds(executorIds, pageable));
     }
 
     public LegalAct getTaskDetail(Long legalActId) {
         return legalActRepository.findById(legalActId)
-                .filter(la -> !la.isDeleted())
                 .orElseThrow(() -> new AppException("Tapşırıq tapılmadı", HttpStatus.NOT_FOUND));
     }
 
@@ -54,6 +78,26 @@ public class ExecutorDashboardService {
         boolean isCompletion = note.getNote().contains("İcra olunub");
         if (isCompletion && act.isProofRequired() && (files == null || files.isEmpty())) {
             throw new AppException("Bu tapşırıq üçün sübut faylı əlavə etmək məcburidir");
+        }
+
+        // 60-minute grace period: if a pending icra log exists from this user, replace it
+        if (isCompletion) {
+            List<ExecutorStatusLog> existing = statusLogRepository.findByLegalActIdOrderByCreatedAtDesc(legalActId);
+            for (ExecutorStatusLog prev : existing) {
+                if (prev.isPending() && prev.isExecutionComplete()
+                        && prev.getUser() != null && prev.getUser().getId().equals(user.getId())) {
+                    long minutesElapsed = java.time.Duration.between(prev.getCreatedAt(), LocalDateTime.now()).toMinutes();
+                    if (minutesElapsed <= 60) {
+                        // delete old attachments and the old log
+                        for (ExecutionAttachment att : prev.getAttachments()) {
+                            fileStorageService.delete(att.getFilePath());
+                            attachmentRepository.delete(att);
+                        }
+                        statusLogRepository.delete(prev);
+                        break;
+                    }
+                }
+            }
         }
 
         User currentUser = userRepository.findByUsernameAndIsDeletedFalse(user.getUsername())
@@ -72,7 +116,7 @@ public class ExecutorDashboardService {
         if (files != null) {
             for (MultipartFile file : files) {
                 if (file.isEmpty()) continue;
-                String path = fileStorageService.store(file, "legal-acts/" + legalActId);
+                String path = fileStorageService.store(file, "execution-attachments/" + legalActId);
                 ExecutionAttachment att = ExecutionAttachment.builder()
                         .legalAct(act)
                         .user(currentUser)
@@ -91,19 +135,27 @@ public class ExecutorDashboardService {
 
     @Transactional
     public void withdrawStatus(Long legalActId, UserDetailsImpl user) {
+        // Only withdraw the current user's own pending log
         List<ExecutorStatusLog> logs = statusLogRepository.findByLegalActIdOrderByCreatedAtDesc(legalActId);
-        if (logs.isEmpty()) throw new AppException("Heç bir status tapılmadı");
+        ExecutorStatusLog target = logs.stream()
+                .filter(l -> l.isPending()
+                        && l.getUser() != null
+                        && l.getUser().getId().equals(user.getId()))
+                .findFirst()
+                .orElseThrow(() -> new AppException("Geri alınacaq gözləmədə olan status tapılmadı"));
 
-        ExecutorStatusLog latest = logs.get(0);
-        if (!latest.isPending()) {
-            throw new AppException("Yalnız gözləmədə olan statusu geri almaq olar");
+        if (!user.getRole().equals("admin")) {
+            long minutesElapsed = java.time.Duration.between(target.getCreatedAt(), LocalDateTime.now()).toMinutes();
+            if (minutesElapsed > 60) {
+                throw new AppException("Statusu yalnız göndərildikdən sonrakı 60 dəqiqə ərzində geri almaq mümkündür");
+            }
         }
-        // Delete attachments first
-        for (ExecutionAttachment att : latest.getAttachments()) {
+
+        for (ExecutionAttachment att : target.getAttachments()) {
             fileStorageService.delete(att.getFilePath());
             attachmentRepository.delete(att);
         }
-        statusLogRepository.delete(latest);
+        statusLogRepository.delete(target);
     }
 
     public ExecutionAttachment getAttachment(Long attachmentId) {

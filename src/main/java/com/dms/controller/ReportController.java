@@ -4,7 +4,7 @@ import com.dms.dto.ApiResponse;
 import com.dms.service.ReportService;
 import com.dms.security.UserDetailsImpl;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -24,5 +24,16 @@ public class ReportController {
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestParam(required = false) Long deptId) {
         return ResponseEntity.ok(ApiResponse.ok(reportService.generateReport(user, deptId)));
+    }
+
+    @GetMapping("/export-excel")
+    public ResponseEntity<byte[]> exportExcel(
+            @AuthenticationPrincipal UserDetailsImpl user,
+            @RequestParam(required = false) Long deptId) {
+        byte[] bytes = reportService.exportExcel(user, deptId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"hesabat.xlsx\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(bytes);
     }
 }

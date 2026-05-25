@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
 import { useEffect, useState } from 'react'
 import type { Announcement } from '../types'
+import toast from 'react-hot-toast'
 
 export default function Layout() {
   const { user, logout, canManage, isAdmin, isExecutor } = useAuth()
@@ -10,6 +11,9 @@ export default function Layout() {
   const location = useLocation()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [pendingCount, setPendingCount] = useState(0)
+  const [showChangePwModal, setShowChangePwModal] = useState(false)
+  const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [changingPw, setChangingPw] = useState(false)
 
   useEffect(() => {
     client.get('/announcements/active').then(r => setAnnouncements(r.data.data ?? [])).catch(() => {})
@@ -25,6 +29,35 @@ export default function Layout() {
     await client.post('/auth/logout').catch(() => {})
     logout()
     navigate('/login')
+  }
+
+  const openChangePw = () => {
+    setPwForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+    setShowChangePwModal(true)
+  }
+
+  const submitChangePw = async () => {
+    if (!pwForm.currentPassword || !pwForm.newPassword) {
+      toast.error('Bütün sahələri doldurun')
+      return
+    }
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      toast.error('Yeni şifrələr uyğun gəlmir')
+      return
+    }
+    setChangingPw(true)
+    try {
+      await client.post('/auth/change-password', {
+        currentPassword: pwForm.currentPassword,
+        newPassword: pwForm.newPassword,
+      })
+      toast.success('Şifrə uğurla dəyişdirildi')
+      setShowChangePwModal(false)
+    } catch {
+      toast.error('Cari şifrə səhvdir')
+    } finally {
+      setChangingPw(false)
+    }
   }
 
   const roleLabel = (role?: string) => {
@@ -153,7 +186,7 @@ export default function Layout() {
         <div className="sidebar-footer">
           <button
             className="sidebar-footer-btn"
-            onClick={() => navigate('/force-password-change')}
+            onClick={openChangePw}
             title="Şifrəni dəyiş"
           >
             <i className="bi bi-key" />
@@ -165,6 +198,47 @@ export default function Layout() {
           </button>
         </div>
       </aside>
+
+      {/* Change password modal */}
+      {showChangePwModal && (
+        <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title"><i className="bi bi-key me-2" />Şifrəni Dəyiş</h5>
+                <button className="btn-close" onClick={() => setShowChangePwModal(false)} />
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Cari şifrə *</label>
+                  <input type="password" className="form-control form-control-sm"
+                    value={pwForm.currentPassword}
+                    onChange={e => setPwForm(p => ({ ...p, currentPassword: e.target.value }))} />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Yeni şifrə *</label>
+                  <input type="password" className="form-control form-control-sm"
+                    value={pwForm.newPassword}
+                    onChange={e => setPwForm(p => ({ ...p, newPassword: e.target.value }))} />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Yeni şifrəni təkrar daxil edin *</label>
+                  <input type="password" className="form-control form-control-sm"
+                    value={pwForm.confirmPassword}
+                    onChange={e => setPwForm(p => ({ ...p, confirmPassword: e.target.value }))} />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowChangePwModal(false)}>Ləğv et</button>
+                <button className="btn btn-primary btn-sm" onClick={submitChangePw} disabled={changingPw}>
+                  {changingPw ? <span className="spinner-border spinner-border-sm me-1" /> : <i className="bi bi-check-lg me-1" />}
+                  Yadda saxla
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Main area ───────────────────────────── */}
       <div className="main-content">

@@ -20,6 +20,7 @@ public class Announcement {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 
+    @Builder.Default
     @Column(name = "is_active")
     private boolean isActive = true;
 

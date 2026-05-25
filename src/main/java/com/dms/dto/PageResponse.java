@@ -32,6 +32,10 @@ public class PageResponse<T> {
                 .build();
     }
 
+    public static <T> PageResponse<T> empty() {
+        return PageResponse.<T>builder().data(List.of()).total(0).page(0).size(0).totalPages(0).build();
+    }
+
     public static <T> PageResponse<T> from(Page<T> page) {
         return PageResponse.<T>builder()
                 .data(page.getContent())

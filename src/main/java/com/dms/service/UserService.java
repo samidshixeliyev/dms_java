@@ -76,6 +76,9 @@ public class UserService {
             AuthService.validatePasswordStrength(data.get("password").toString());
             user.setPassword(passwordEncoder.encode(data.get("password").toString()));
         }
+        if (data.containsKey("forcePasswordChange")) {
+            user.setForcePasswordChange(Boolean.TRUE.equals(data.get("forcePasswordChange")));
+        }
 
         return userRepository.save(user);
     }

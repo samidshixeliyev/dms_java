@@ -172,6 +172,20 @@ export default function Users() {
                       />
                     </div>
                   )}
+                  <div className="col-12">
+                    <div className="form-check">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        id="forcePasswordChange"
+                        checked={!!form.forcePasswordChange}
+                        onChange={e => setForm(p => ({ ...p, forcePasswordChange: e.target.checked }))}
+                      />
+                      <label className="form-check-label" htmlFor="forcePasswordChange">
+                        Növbəti girişdə şifrəni dəyişməyə məcbur et
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="modal-footer">
