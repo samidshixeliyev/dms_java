@@ -35,6 +35,9 @@ dependencies {
     // Excel + Word export (Apache POI)
     implementation("org.apache.poi:poi-ooxml:5.3.0")
 
+    // Hibernate Jackson module (handles lazy proxy serialization)
+    implementation("com.fasterxml.jackson.datatype:jackson-datatype-hibernate6")
+
     // Lombok
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
