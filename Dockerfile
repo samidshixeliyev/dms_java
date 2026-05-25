@@ -2,7 +2,7 @@
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm ci --prefer-offline
 COPY frontend/ ./
 RUN npm run build
 
@@ -14,14 +14,15 @@ COPY gradlew ./
 COPY gradle ./gradle
 RUN chmod +x gradlew
 
-# Copy source
+# Copy source (exclude static — frontend provides them)
 COPY src/ src/
+RUN rm -rf src/main/resources/static
 
 # Copy React build into static resources before building the JAR
 COPY --from=frontend-builder /app/frontend/dist/ src/main/resources/static/
 
 # Build without running tests
-RUN ./gradlew bootJar -x test --no-daemon
+RUN ./gradlew bootJar -x test --no-daemon --no-build-cache
 
 # Stage 3: Runtime image
 FROM eclipse-temurin:21-jre-alpine
