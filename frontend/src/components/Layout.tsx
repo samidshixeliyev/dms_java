@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
 import { useEffect, useState } from 'react'
@@ -7,11 +7,19 @@ import type { Announcement } from '../types'
 export default function Layout() {
   const { user, logout, canManage, isAdmin, isExecutor } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
+  const [pendingCount, setPendingCount] = useState(0)
 
   useEffect(() => {
-    client.get('/announcements/active').then(r => setAnnouncements(r.data.data ?? []))
+    client.get('/announcements/active').then(r => setAnnouncements(r.data.data ?? [])).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (canManage()) {
+      client.get('/approvals/count').then(r => setPendingCount(r.data.data ?? 0)).catch(() => {})
+    }
+  }, [location.pathname])
 
   const handleLogout = async () => {
     await client.post('/auth/logout').catch(() => {})
@@ -19,89 +27,186 @@ export default function Layout() {
     navigate('/login')
   }
 
+  const roleLabel = (role?: string) => {
+    if (role === 'admin') return 'Administrator'
+    if (role === 'manager') return 'Rəhbər'
+    if (role === 'executor') return 'İcraçı'
+    return role ?? ''
+  }
+
+  const avatarInitial = (user?.username ?? 'U')[0].toUpperCase()
+
   return (
-    <div style={{ display: 'flex' }}>
-      {/* Sidebar */}
-      <nav className="sidebar">
-        <div className="sidebar-brand">DMS <span>•</span> Sistem</div>
-        <div className="sidebar-nav">
+    <div className="app-wrapper">
+      {/* ── Sidebar ─────────────────────────────── */}
+      <aside className="sidebar">
+
+        {/* Brand */}
+        <div className="sidebar-brand-block">
+          <div className="sidebar-brand-icon">
+            <i className="bi bi-shield-lock-fill" />
+          </div>
+          <div>
+            <div className="sidebar-brand-title">DMS</div>
+            <div className="sidebar-brand-sub">Sənəd İdarəetmə</div>
+          </div>
+        </div>
+
+        {/* User */}
+        <div className="sidebar-user-block">
+          <div className="sidebar-avatar">{avatarInitial}</div>
+          <div className="sidebar-user-info">
+            <div className="sidebar-user-name">{user?.username}</div>
+            <div className="sidebar-user-role">{roleLabel(user?.role)}</div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="sidebar-nav">
+
+          {/* Section: Əsas */}
+          <div className="sidebar-section-label">Əsas</div>
+
           {!isExecutor() && (
             <NavLink to="/legal-acts" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-              <i className="bi bi-file-earmark-text" /> Hüquqi Aktlar
-            </NavLink>
-          )}
-          {(isExecutor() || isAdmin() || canManage()) && (
-            <NavLink to="/executor/dashboard" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-              <i className="bi bi-list-check" /> İcraçı Paneli
-            </NavLink>
-          )}
-          {canManage() && (
-            <NavLink to="/approvals" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-              <i className="bi bi-check2-circle" /> Təsdiqləmələr
-            </NavLink>
-          )}
-          {canManage() && (
-            <NavLink to="/reports" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-              <i className="bi bi-bar-chart" /> Hesabatlar
+              <i className="bi bi-file-text" />
+              <span>Hüquqi Aktlar</span>
             </NavLink>
           )}
 
+          <NavLink to="/executor/dashboard" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+            <i className="bi bi-kanban" />
+            <span>İcraçı Paneli</span>
+          </NavLink>
+
+          {canManage() && (
+            <NavLink to="/approvals" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+              <i className="bi bi-check2-square" />
+              <span>Təsdiq Gözləyənlər</span>
+              {pendingCount > 0 && <span className="sidebar-badge">{pendingCount}</span>}
+            </NavLink>
+          )}
+
+          {canManage() && (
+            <NavLink to="/reports" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+              <i className="bi bi-bar-chart-line" />
+              <span>Hesabat</span>
+            </NavLink>
+          )}
+
+          {/* Section: Kataloqlar — admin only */}
           {isAdmin() && (
             <>
-              <div className="sidebar-link" style={{ opacity: 0.5, fontSize: '0.7rem', letterSpacing: 1, paddingTop: '1.5rem', pointerEvents: 'none' }}>
-                İDARƏETMƏ
-              </div>
-              <NavLink to="/users" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-people" /> İstifadəçilər
-              </NavLink>
-              <NavLink to="/departments" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-diagram-3" /> Şöbələr
-              </NavLink>
-              <NavLink to="/executors" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-person-badge" /> İcraçılar
-              </NavLink>
+              <div className="sidebar-section-label">Kataloqlar</div>
+
               <NavLink to="/act-types" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-tags" /> Akt Növləri
+                <i className="bi bi-bookmark" />
+                <span>Sənəd növləri</span>
               </NavLink>
-              <NavLink to="/execution-notes" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-journal-check" /> İcra Qeydləri
-              </NavLink>
+
               <NavLink to="/issuing-authorities" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-building" /> Göndərən Qurumlar
+                <i className="bi bi-building-check" />
+                <span>Kim qəbul edib</span>
               </NavLink>
-              <NavLink to="/activity-logs" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-clock-history" /> Fəaliyyət Jurnalı
+
+              <NavLink to="/departments" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                <i className="bi bi-diagram-3" />
+                <span>İdarələr</span>
               </NavLink>
-              <NavLink to="/announcements" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
-                <i className="bi bi-megaphone" /> Elanlar
+
+              <NavLink to="/executors" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                <i className="bi bi-people" />
+                <span>Rəhbərlər</span>
+              </NavLink>
+
+              <NavLink to="/execution-notes" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                <i className="bi bi-sticky" />
+                <span>İcra qeydləri</span>
               </NavLink>
             </>
           )}
-        </div>
-        <div style={{ padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ fontSize: '0.8rem', opacity: 0.7, marginBottom: '0.5rem' }}>
-            {user?.username} ({user?.role})
-          </div>
-          <button className="btn btn-sm w-100" style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' }} onClick={handleLogout}>
-            <i className="bi bi-box-arrow-left me-2" />Çıxış
+
+          {/* Section: Admin — admin only */}
+          {isAdmin() && (
+            <>
+              <div className="sidebar-section-label">Admin</div>
+
+              <NavLink to="/users" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                <i className="bi bi-person-gear" />
+                <span>İstifadəçilər</span>
+              </NavLink>
+
+              <NavLink to="/activity-logs" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                <i className="bi bi-journal-text" />
+                <span>Aktivlik Jurnalı</span>
+              </NavLink>
+
+              <NavLink to="/announcements" className={({ isActive }) => 'sidebar-link' + (isActive ? ' active' : '')}>
+                <i className="bi bi-megaphone" />
+                <span>Elanlar</span>
+              </NavLink>
+            </>
+          )}
+        </nav>
+
+        {/* Footer buttons */}
+        <div className="sidebar-footer">
+          <button
+            className="sidebar-footer-btn"
+            onClick={() => navigate('/force-password-change')}
+            title="Şifrəni dəyiş"
+          >
+            <i className="bi bi-key" />
+            <span>Şifrəni dəyiş</span>
+          </button>
+          <button className="sidebar-footer-btn sidebar-footer-btn--logout" onClick={handleLogout} title="Çıxış">
+            <i className="bi bi-box-arrow-right" />
+            <span>Çıxış</span>
           </button>
         </div>
-      </nav>
+      </aside>
 
-      {/* Main */}
+      {/* ── Main area ───────────────────────────── */}
       <div className="main-content">
+
+        {/* Announcement ticker */}
         {announcements.length > 0 && (
           <div className="announcement-bar">
-            <i className="bi bi-megaphone-fill me-2" />
-            {announcements[0].title}: {announcements[0].message}
+            <div className="announcement-label">
+              <i className="bi bi-megaphone-fill" />
+              Elan
+            </div>
+            <div className="announcement-ticker-wrap">
+              <div className="announcement-ticker">
+                {[...announcements, ...announcements].map((a, i) => (
+                  <span key={i} className="announcement-item">
+                    <strong>{a.title}</strong>
+                    {a.message ? ` — ${a.message}` : ''}
+                    <span className="announcement-sep">•</span>
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         )}
-        <div className="topbar">
-          <span className="fw-semibold" style={{ color: 'var(--primary)' }}>
-            Sənəd İdarəetmə Sistemi
-          </span>
-          <span className="text-muted small">{user?.username}</span>
-        </div>
+
+        {/* Topbar */}
+        <header className="topbar">
+          <div className="topbar-left">
+            <span className="topbar-title">Sənəd İdarəetmə Sistemi</span>
+          </div>
+          <div className="topbar-right">
+            <div className="topbar-user">
+              <div className="topbar-avatar">{avatarInitial}</div>
+              <div className="topbar-user-info">
+                <span className="topbar-username">{user?.username}</span>
+                <span className="topbar-role">{roleLabel(user?.role)}</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
         <div className="page-container">
           <Outlet />
         </div>

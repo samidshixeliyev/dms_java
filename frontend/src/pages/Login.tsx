@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import client from '../api/client'
-import toast from 'react-hot-toast'
 import type { AuthUser } from '../types'
 
 export default function Login() {
@@ -10,9 +9,12 @@ export default function Login() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ username: '', password: '' })
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     setLoading(true)
     try {
       const res = await client.post('/auth/login', form)
@@ -25,8 +27,8 @@ export default function Login() {
       } else {
         navigate('/legal-acts')
       }
-    } catch {
-      // Error handled by interceptor
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'İstifadəçi adı və ya şifrə yanlışdır')
     } finally {
       setLoading(false)
     }
@@ -35,42 +37,86 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <div className="text-center mb-4">
-          <div className="login-logo">DMS<span>.</span></div>
-          <p className="text-muted mt-1">Sənəd İdarəetmə Sistemi</p>
+
+        {/* Logo */}
+        <div className="login-logo-wrap">
+          <div className="login-logo-icon">
+            <i className="bi bi-shield-lock-fill" />
+          </div>
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label className="form-label fw-medium">İstifadəçi adı</label>
-            <div className="input-group">
-              <span className="input-group-text"><i className="bi bi-person" /></span>
+
+        <div className="login-title">DMS</div>
+        <div className="login-subtitle">Sənəd İdarəetmə Sistemi</div>
+
+        {error && (
+          <div className="login-error">
+            <i className="bi bi-exclamation-triangle-fill me-2" />
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} noValidate>
+          {/* Username */}
+          <div className="login-field">
+            <label className="login-label">İstifadəçi adı</label>
+            <div className="login-input-wrap">
+              <span className="login-input-icon"><i className="bi bi-person-fill" /></span>
               <input
-                className="form-control"
+                type="text"
+                className="login-input"
+                placeholder="İstifadəçi adını daxil edin"
                 value={form.username}
                 onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
                 required
                 autoFocus
+                autoComplete="username"
               />
             </div>
           </div>
-          <div className="mb-4">
-            <label className="form-label fw-medium">Şifrə</label>
-            <div className="input-group">
-              <span className="input-group-text"><i className="bi bi-lock" /></span>
+
+          {/* Password */}
+          <div className="login-field">
+            <label className="login-label">Şifrə</label>
+            <div className="login-input-wrap">
+              <span className="login-input-icon"><i className="bi bi-lock-fill" /></span>
               <input
-                type="password"
-                className="form-control"
+                type={showPassword ? 'text' : 'password'}
+                className="login-input login-input--has-toggle"
+                placeholder="Şifrəni daxil edin"
                 value={form.password}
                 onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                 required
+                autoComplete="current-password"
               />
+              <button
+                type="button"
+                className="login-toggle-btn"
+                onClick={() => setShowPassword(s => !s)}
+                tabIndex={-1}
+              >
+                <i className={`bi bi-${showPassword ? 'eye-slash' : 'eye'}`} />
+              </button>
             </div>
           </div>
-          <button type="submit" className="btn btn-primary w-100 py-2" disabled={loading}>
-            {loading ? <span className="spinner-border spinner-border-sm me-2" /> : null}
-            Daxil ol
+
+          <button type="submit" className="login-submit-btn" disabled={loading}>
+            {loading ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" />
+                Gözləyin...
+              </>
+            ) : (
+              <>
+                <i className="bi bi-box-arrow-in-right me-2" />
+                Daxil ol
+              </>
+            )}
           </button>
         </form>
+
+        <div className="login-footer">
+          &copy; {new Date().getFullYear()} DMS &mdash; Sənəd İdarəetmə Sistemi
+        </div>
       </div>
     </div>
   )

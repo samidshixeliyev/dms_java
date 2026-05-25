@@ -90,18 +90,14 @@ export default function Users() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5 className="mb-0 fw-bold" style={{ color: 'var(--primary)' }}>
-          <i className="bi bi-people me-2" />İstifadəçilər
-        </h5>
+      <div className="page-header">
+        <div className="page-title"><i className="bi bi-person-gear" />İstifadəçilər</div>
         <button className="btn btn-primary btn-sm" onClick={openCreate}>
-          <i className="bi bi-plus-lg me-1" />Yeni
+          <i className="bi bi-plus-lg" />Yeni
         </button>
       </div>
       <div className="card">
-        <div className="card-body">
-          <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} />
-        </div>
+        <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} />
       </div>
 
       {showModal && (

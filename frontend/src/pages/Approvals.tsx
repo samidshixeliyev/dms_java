@@ -63,24 +63,22 @@ export default function Approvals() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5 className="mb-0 fw-bold" style={{ color: 'var(--primary)' }}>
-          <i className="bi bi-check2-circle me-2" />Gözləmədə olan Təsdiqləmələr
-        </h5>
+      <div className="page-header">
+        <div className="page-title">
+          <i className="bi bi-check2-square" />Gözləmədə olan Təsdiqləmələr
+        </div>
       </div>
 
       <div className="card">
-        <div className="card-body">
-          <DataTable columns={columns} fetchData={fetchData as any} refreshKey={refreshKey} />
-        </div>
+        <DataTable columns={columns} fetchData={fetchData as any} refreshKey={refreshKey} />
       </div>
 
       {rejectModal.open && (
         <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Rədd etmə səbəbi</h5>
+              <div className="modal-header header-danger">
+                <h5 className="modal-title"><i className="bi bi-x-circle me-2" />Rədd etmə səbəbi</h5>
                 <button className="btn-close" onClick={() => setRejectModal({ open: false, id: null })} />
               </div>
               <div className="modal-body">
@@ -92,7 +90,7 @@ export default function Approvals() {
                   Ləğv et
                 </button>
                 <button className="btn btn-danger btn-sm" onClick={confirmReject}>
-                  Rədd et
+                  <i className="bi bi-x-lg me-1" />Rədd et
                 </button>
               </div>
             </div>

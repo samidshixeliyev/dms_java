@@ -51,13 +51,13 @@ export default function ExecutionNotes() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5 className="mb-0 fw-bold" style={{ color: 'var(--primary)' }}><i className="bi bi-journal-check me-2" />İcra Qeydləri</h5>
-        <button className="btn btn-primary btn-sm" onClick={openCreate}><i className="bi bi-plus-lg me-1" />Yeni</button>
+      <div className="page-header">
+        <div className="page-title"><i className="bi bi-sticky" />İcra qeydləri</div>
+        <button className="btn btn-primary btn-sm" onClick={openCreate}><i className="bi bi-plus-lg" />Yeni</button>
       </div>
-      <div className="card"><div className="card-body">
+      <div className="card">
         <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} />
-      </div></div>
+      </div>
 
       {showModal && (
         <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)' }}>

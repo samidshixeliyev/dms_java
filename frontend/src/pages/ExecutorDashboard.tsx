@@ -88,48 +88,59 @@ export default function ExecutorDashboard() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5 className="mb-0 fw-bold" style={{ color: 'var(--primary)' }}>
-          <i className="bi bi-list-check me-2" />İcraçı Paneli
-        </h5>
+      <div className="page-header">
+        <div className="page-title">
+          <i className="bi bi-kanban" />İcraçı Paneli
+        </div>
       </div>
 
       <div className="row g-3">
         <div className={detail ? 'col-md-7' : 'col-12'}>
           <div className="card">
-            <div className="card-body">
-              <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} />
-            </div>
+            <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} />
           </div>
         </div>
 
         {detail && (
           <div className="col-md-5">
             <div className="card">
-              <div className="card-header d-flex justify-content-between">
+              <div className="card-header">
                 <span>Tapşırıq #{detail.legalActNumber}</span>
-                <button className="btn-close btn-sm" onClick={() => setDetail(null)} />
+                <button
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.1rem', padding: 0 }}
+                  onClick={() => setDetail(null)}
+                >
+                  <i className="bi bi-x-lg" />
+                </button>
               </div>
-              <div className="card-body">
-                <dl className="row small mb-3">
-                  <dt className="col-sm-5">Akt tarixi</dt>
-                  <dd className="col-sm-7">{detail.legalActDate?.substring(0, 10)}</dd>
-                  <dt className="col-sm-5">Son tarix</dt>
-                  <dd className="col-sm-7">{detail.executionDeadline?.substring(0, 10) ?? '-'}</dd>
-                  <dt className="col-sm-5">Sübut tələb olunur</dt>
-                  <dd className="col-sm-7">{detail.proofRequired ? 'Bəli' : 'Xeyr'}</dd>
+              <div className="card-body" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 220px)' }}>
+                <dl className="row small mb-3" style={{ rowGap: '.3rem' }}>
+                  <dt className="col-5 text-muted fw-semibold">Akt tarixi</dt>
+                  <dd className="col-7 mb-0">{detail.legalActDate?.substring(0, 10)}</dd>
+                  <dt className="col-5 text-muted fw-semibold">Son tarix</dt>
+                  <dd className="col-7 mb-0">{detail.executionDeadline?.substring(0, 10) ?? '—'}</dd>
+                  <dt className="col-5 text-muted fw-semibold">Sübut tələbi</dt>
+                  <dd className="col-7 mb-0">
+                    {detail.proofRequired
+                      ? <span className="badge badge-pending">Tələb olunur</span>
+                      : <span className="badge badge-executed">Tələb yoxdur</span>}
+                  </dd>
                 </dl>
-                <p className="small">{detail.taskDescription}</p>
+                {detail.taskDescription && (
+                  <p className="small text-muted" style={{ whiteSpace: 'pre-wrap' }}>{detail.taskDescription}</p>
+                )}
 
-                <h6 className="fw-semibold mt-3">Status Tarixi</h6>
+                <div className="fw-bold mb-2 mt-3" style={{ fontSize: '.82rem', color: 'var(--primary)' }}>
+                  Status Tarixi
+                </div>
                 <div className="timeline">
                   {detail.statusLogs?.map(log => (
                     <div className="timeline-item" key={log.id}>
                       <div className={`timeline-dot ${log.approvalStatus ?? ''}`} />
                       <div className="small">
-                        <strong>{log.executionNote?.note}</strong>
-                        {log.customNote && <div className="text-muted">{log.customNote}</div>}
-                        <div className="text-muted">{new Date(log.createdAt).toLocaleString('az')}</div>
+                        <div className="fw-semibold">{log.executionNote?.note}</div>
+                        {log.customNote && <div className="text-muted" style={{ fontStyle: 'italic' }}>{log.customNote}</div>}
+                        <div className="text-muted" style={{ fontSize: '.72rem' }}>{new Date(log.createdAt).toLocaleString('az')}</div>
                         {log.approvalStatus && (
                           <span className={`badge badge-${log.approvalStatus} mt-1`}>
                             {log.approvalStatus === 'approved' ? 'Təsdiqləndi' :
@@ -138,11 +149,12 @@ export default function ExecutorDashboard() {
                           </span>
                         )}
                         {log.attachments && log.attachments.length > 0 && (
-                          <div className="mt-1">
+                          <div className="mt-1 d-flex flex-wrap gap-1">
                             {log.attachments.map(att => (
                               <a key={att.id}
                                 href={`/api/executor/attachments/${att.id}/download`}
-                                className="badge bg-light text-dark border me-1"
+                                className="badge bg-light"
+                                style={{ textDecoration: 'none', fontSize: '.72rem' }}
                                 download>
                                 <i className="bi bi-paperclip me-1" />{att.originalName}
                               </a>
@@ -152,7 +164,9 @@ export default function ExecutorDashboard() {
                       </div>
                     </div>
                   ))}
-                  {!detail.statusLogs?.length && <p className="text-muted small">Heç bir qeyd yoxdur</p>}
+                  {!detail.statusLogs?.length && (
+                    <p className="text-muted small">Heç bir qeyd yoxdur</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -165,15 +179,17 @@ export default function ExecutorDashboard() {
         <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Status Göndər — #{selectedAct.legalActNumber}</h5>
+              <div className="modal-header header-info">
+                <h5 className="modal-title">
+                  <i className="bi bi-send me-2" />Status Göndər — #{selectedAct.legalActNumber}
+                </h5>
                 <button className="btn-close" onClick={() => setShowStatusModal(false)} />
               </div>
               <div className="modal-body">
                 {selectedAct.proofRequired && (
                   <div className="alert alert-warning small">
-                    <i className="bi bi-exclamation-triangle me-2" />
-                    Bu tapşırıq üçün "İcra olunub" statusu seçərkən sənəd yükləmək <strong>məcburidir</strong>.
+                    <i className="bi bi-exclamation-triangle-fill" />
+                    Bu tapşırıq üçün "İcra olunub" seçərkən sənəd yükləmək <strong>məcburidir</strong>.
                   </div>
                 )}
                 <div className="mb-3">
@@ -193,13 +209,19 @@ export default function ExecutorDashboard() {
                   <label className="form-label">Fayllar</label>
                   <input type="file" className="form-control" multiple
                     onChange={e => setFiles(Array.from(e.target.files ?? []))} />
-                  {files.length > 0 && <div className="mt-1 small text-muted">{files.length} fayl seçildi</div>}
+                  {files.length > 0 && (
+                    <ul className="file-list mt-2">
+                      {files.map((f, i) => (
+                        <li key={i}><i className="bi bi-file-earmark" />{f.name}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary btn-sm" onClick={() => setShowStatusModal(false)}>Ləğv et</button>
                 <button className="btn btn-primary btn-sm" onClick={submitStatus} disabled={saving}>
-                  {saving ? <span className="spinner-border spinner-border-sm me-1" /> : null}
+                  {saving ? <span className="spinner-border spinner-border-sm" /> : <i className="bi bi-send" />}
                   Göndər
                 </button>
               </div>

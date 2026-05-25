@@ -24,14 +24,12 @@ export default function ActivityLogs() {
 
   return (
     <>
-      <div className="mb-3">
-        <h5 className="mb-0 fw-bold" style={{ color: 'var(--primary)' }}>
-          <i className="bi bi-clock-history me-2" />Fəaliyyət Jurnalı
-        </h5>
+      <div className="page-header">
+        <div className="page-title"><i className="bi bi-journal-text" />Aktivlik Jurnalı</div>
       </div>
-      <div className="card"><div className="card-body">
+      <div className="card">
         <DataTable columns={columns} fetchData={fetchData} />
-      </div></div>
+      </div>
     </>
   )
 }

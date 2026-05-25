@@ -154,21 +154,24 @@ export default function LegalActs() {
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5 className="mb-0 fw-bold" style={{ color: 'var(--primary)' }}>
-          <i className="bi bi-file-earmark-text me-2" />Hüquqi Aktlar
-        </h5>
+      <div className="page-header">
+        <div className="page-title">
+          <i className="bi bi-file-text" />Hüquqi Aktlar
+        </div>
         {canManage() && (
           <button className="btn btn-primary btn-sm" onClick={openCreate}>
-            <i className="bi bi-plus-lg me-1" />Yeni Akt
+            <i className="bi bi-plus-lg" />Yeni Akt
           </button>
         )}
       </div>
 
       <div className="card">
-        <div className="card-body">
-          <DataTable columns={columns} fetchData={fetchData} rowClassName={getRowClass} refreshKey={refreshKey} />
-        </div>
+        <DataTable
+          columns={columns}
+          fetchData={fetchData}
+          rowClassName={getRowClass}
+          refreshKey={refreshKey}
+        />
       </div>
 
       {/* Modal */}

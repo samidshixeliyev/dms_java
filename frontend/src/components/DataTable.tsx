@@ -14,15 +14,19 @@ interface Props<T> {
   rowClassName?: (row: T) => string
   onRowClick?: (row: T) => void
   refreshKey?: number
+  /** Extra toolbar content rendered to the right of the search bar */
+  toolbar?: React.ReactNode
+  /** Page size, defaults to 25 */
+  pageSize?: number
 }
 
 export default function DataTable<T extends { id?: number | string | object }>({
-  columns, fetchData, rowClassName, onRowClick, refreshKey = 0
+  columns, fetchData, rowClassName, onRowClick, refreshKey = 0, toolbar, pageSize = 25
 }: Props<T>) {
   const [data, setData] = useState<T[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
-  const [size] = useState(25)
+  const size = pageSize
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchInput, setSearchInput] = useState('')
@@ -52,21 +56,34 @@ export default function DataTable<T extends { id?: number | string | object }>({
   const goPage = (p: number) => { setPage(p); load(p, search) }
   const totalPages = Math.ceil(total / size)
 
+  const pages: number[] = []
+  const delta = 2
+  for (let i = Math.max(0, page - delta); i <= Math.min(totalPages - 1, page + delta); i++) {
+    pages.push(i)
+  }
+
   return (
-    <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <input
-          className="form-control form-control-sm"
-          style={{ maxWidth: 280 }}
-          placeholder="Axtar..."
-          value={searchInput}
-          onChange={e => setSearchInput(e.target.value)}
-        />
-        <small className="text-muted">Cəmi: {total}</small>
+    <div className="dt-wrapper">
+      {/* Toolbar */}
+      <div className="table-toolbar">
+        <div className="search-bar">
+          <span className="search-bar-icon"><i className="bi bi-search" /></span>
+          <input
+            className="search-bar-input"
+            placeholder="Axtar..."
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+          />
+        </div>
+        <div className="table-toolbar-right">
+          {toolbar}
+          <span className="table-total-badge">{total} qeyd</span>
+        </div>
       </div>
 
+      {/* Table */}
       <div className="table-responsive">
-        <table className="table table-hover table-sm mb-0">
+        <table className="table table-hover dt-table mb-0">
           <thead>
             <tr>
               {columns.map((c, i) => (
@@ -76,11 +93,18 @@ export default function DataTable<T extends { id?: number | string | object }>({
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={columns.length} className="text-center py-4">
-                <div className="spinner-border spinner-border-sm text-secondary" />
-              </td></tr>
+              <tr>
+                <td colSpan={columns.length} className="text-center py-5">
+                  <div className="spinner-border text-secondary" style={{ width: '1.25rem', height: '1.25rem' }} />
+                </td>
+              </tr>
             ) : data.length === 0 ? (
-              <tr><td colSpan={columns.length} className="text-center text-muted py-4">Məlumat yoxdur</td></tr>
+              <tr>
+                <td colSpan={columns.length} className="dt-empty">
+                  <i className="bi bi-inbox dt-empty-icon" />
+                  <div>Məlumat tapılmadı</div>
+                </td>
+              </tr>
             ) : data.map((row, ri) => (
               <tr
                 key={ri}
@@ -99,17 +123,40 @@ export default function DataTable<T extends { id?: number | string | object }>({
         </table>
       </div>
 
+      {/* Pagination */}
       {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mt-3">
-          <small className="text-muted">Səhifə {page + 1} / {totalPages}</small>
-          <div className="btn-group btn-group-sm">
-            <button className="btn btn-outline-secondary" disabled={page === 0} onClick={() => goPage(page - 1)}>
-              <i className="bi bi-chevron-left" />
-            </button>
-            <button className="btn btn-outline-secondary" disabled={page >= totalPages - 1} onClick={() => goPage(page + 1)}>
-              <i className="bi bi-chevron-right" />
-            </button>
+        <div className="dt-pagination">
+          <div className="dt-pagination-info">
+            Səhifə <strong>{page + 1}</strong> / <strong>{totalPages}</strong>
+            &nbsp;({total} qeyd)
           </div>
+          <ul className="pagination pagination-sm mb-0">
+            <li className={`page-item ${page === 0 ? 'disabled' : ''}`}>
+              <button className="page-link" onClick={() => goPage(0)} disabled={page === 0}>
+                <i className="bi bi-chevron-double-left" />
+              </button>
+            </li>
+            <li className={`page-item ${page === 0 ? 'disabled' : ''}`}>
+              <button className="page-link" onClick={() => goPage(page - 1)} disabled={page === 0}>
+                <i className="bi bi-chevron-left" />
+              </button>
+            </li>
+            {pages.map(p => (
+              <li key={p} className={`page-item ${p === page ? 'active' : ''}`}>
+                <button className="page-link" onClick={() => goPage(p)}>{p + 1}</button>
+              </li>
+            ))}
+            <li className={`page-item ${page >= totalPages - 1 ? 'disabled' : ''}`}>
+              <button className="page-link" onClick={() => goPage(page + 1)} disabled={page >= totalPages - 1}>
+                <i className="bi bi-chevron-right" />
+              </button>
+            </li>
+            <li className={`page-item ${page >= totalPages - 1 ? 'disabled' : ''}`}>
+              <button className="page-link" onClick={() => goPage(totalPages - 1)} disabled={page >= totalPages - 1}>
+                <i className="bi bi-chevron-double-right" />
+              </button>
+            </li>
+          </ul>
         </div>
       )}
     </div>
