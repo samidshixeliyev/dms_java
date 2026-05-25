@@ -14,10 +14,10 @@ import java.util.List;
 
 public interface LegalActRepository extends JpaRepository<LegalAct, Long>, JpaSpecificationExecutor<LegalAct> {
 
-    @Query("SELECT la FROM LegalAct la WHERE la.organizationId IN :orgIds ORDER BY la.createdAt DESC")
+    @Query("SELECT la FROM LegalAct la WHERE la.organizationId IN :orgIds")
     Page<LegalAct> findByOrganizationIds(@Param("orgIds") Collection<Long> orgIds, Pageable pageable);
 
-    @Query("SELECT la FROM LegalAct la ORDER BY la.createdAt DESC")
+    @Query("SELECT la FROM LegalAct la")
     Page<LegalAct> findAllActive(Pageable pageable);
 
     @Query("SELECT COUNT(la) > 0 FROM LegalAct la WHERE la.actTypeId = :actTypeId " +
