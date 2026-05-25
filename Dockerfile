@@ -10,9 +10,6 @@ RUN npm run build
 FROM eclipse-temurin:21-jdk-alpine AS backend-builder
 WORKDIR /app
 COPY build.gradle.kts settings.gradle.kts ./
-COPY gradle/ gradle/ 2>/dev/null || true
-
-# Copy Gradle wrapper
 COPY gradlew ./
 COPY gradle ./gradle
 RUN chmod +x gradlew
