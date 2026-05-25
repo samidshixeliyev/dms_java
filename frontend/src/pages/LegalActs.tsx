@@ -63,7 +63,7 @@ export default function LegalActs() {
       relatedDocumentDate: item.relatedDocumentDate,
     })
     setExecutorLinks(item.executorLinks?.map(l => ({
-      executorId: l.id.executorId.toString(),
+      executorId: (l.executorId ?? l.executor?.id ?? '').toString(),
       role: l.role,
       taskDescription: l.taskDescription ?? '',
     })) ?? [])

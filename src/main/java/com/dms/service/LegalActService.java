@@ -42,7 +42,6 @@ public class LegalActService {
 
     public LegalAct findById(Long id) {
         return legalActRepository.findById(id)
-                .filter(la -> !la.isDeleted())
                 .orElseThrow(() -> new AppException("Hüquqi akt tapılmadı", HttpStatus.NOT_FOUND));
     }
 
@@ -52,7 +51,6 @@ public class LegalActService {
 
         LegalAct act = buildFromData(new LegalAct(), data);
         act.setInsertedUserId(currentUser.getId());
-        act.setActive(true);
         act = legalActRepository.save(act);
 
         saveExecutorLinks(act, (List<Map<String, Object>>) data.get("executors"));
@@ -140,7 +138,8 @@ public class LegalActService {
             if (executor == null) continue;
 
             LegalActExecutorLink link = LegalActExecutorLink.builder()
-                    .id(new LegalActExecutorId(act.getId(), executorId))
+                    .legalActId(act.getId())
+                    .executorId(executorId)
                     .legalAct(act)
                     .executor(executor)
                     .role((String) e.getOrDefault("role", "main"))

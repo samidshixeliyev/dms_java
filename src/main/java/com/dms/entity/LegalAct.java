@@ -1,5 +1,6 @@
 package com.dms.entity;
 
+import com.dms.converter.StringBooleanConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -46,13 +47,13 @@ public class LegalAct {
     @Column(name = "legal_act_date")
     private LocalDate legalActDate;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "NVARCHAR(MAX)")
     private String summary;
 
     @Column(name = "task_number")
     private String taskNumber;
 
-    @Column(name = "task_description", columnDefinition = "TEXT")
+    @Column(name = "task_description", columnDefinition = "NVARCHAR(MAX)")
     private String taskDescription;
 
     @Column(name = "execution_deadline")
@@ -64,11 +65,12 @@ public class LegalAct {
     @Column(name = "related_document_date")
     private LocalDate relatedDocumentDate;
 
+    @Convert(converter = StringBooleanConverter.class)
     @Column(name = "proof_required")
     private boolean proofRequired;
 
     @Column(name = "created_date")
-    private LocalDateTime createdDate;
+    private LocalDate createdDate;
 
     @Column(name = "inserted_user_id")
     private Long insertedUserId;
@@ -76,9 +78,6 @@ public class LegalAct {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "inserted_user_id", insertable = false, updatable = false)
     private User insertedUser;
-
-    @Column(name = "is_active")
-    private boolean isActive = true;
 
     @Column(name = "is_deleted")
     private boolean isDeleted;
@@ -89,12 +88,12 @@ public class LegalAct {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    @OneToMany(mappedBy = "legalAct", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "legalAct", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @OrderBy("createdAt DESC")
     @Builder.Default
     private List<ExecutorStatusLog> statusLogs = new ArrayList<>();
 
-    @OneToMany(mappedBy = "legalAct", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "legalAct", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<LegalActExecutorLink> executorLinks = new ArrayList<>();
 
@@ -106,7 +105,7 @@ public class LegalAct {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (createdDate == null) createdDate = LocalDateTime.now();
+        if (createdDate == null) createdDate = LocalDate.now();
     }
 
     @PreUpdate

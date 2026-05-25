@@ -52,8 +52,10 @@ export interface ExecutionNote {
 }
 
 export interface LegalActExecutorLink {
-  id: { legalActId: number; executorId: number }
-  executor: Executor
+  id: number
+  legalActId: number
+  executorId: number
+  executor?: Executor
   role: 'main' | 'helper'
   taskDescription?: string
 }
@@ -99,7 +101,6 @@ export interface LegalAct {
   proofRequired: boolean
   insertedUserId?: number
   insertedUser?: User
-  active: boolean
   createdAt: string
   statusLogs?: ExecutorStatusLog[]
   executorLinks?: LegalActExecutorLink[]

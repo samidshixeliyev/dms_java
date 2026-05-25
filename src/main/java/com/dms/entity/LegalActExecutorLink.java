@@ -10,24 +10,28 @@ import java.time.LocalDateTime;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class LegalActExecutorLink {
 
-    @EmbeddedId
-    private LegalActExecutorId id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "legal_act_id")
+    private Long legalActId;
+
+    @Column(name = "executor_id")
+    private Long executorId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("legalActId")
-    @JoinColumn(name = "legal_act_id")
+    @JoinColumn(name = "legal_act_id", insertable = false, updatable = false)
     private LegalAct legalAct;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @MapsId("executorId")
-    @JoinColumn(name = "executor_id")
+    @JoinColumn(name = "executor_id", insertable = false, updatable = false)
     private Executor executor;
 
-    // "main" or "helper"
     @Column(nullable = false)
     private String role;
 
-    @Column(name = "task_description", columnDefinition = "TEXT")
+    @Column(name = "task_description", columnDefinition = "NVARCHAR(MAX)")
     private String taskDescription;
 
     @Column(name = "created_at")
