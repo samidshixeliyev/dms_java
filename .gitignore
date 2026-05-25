@@ -33,3 +33,6 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# DB backup — do NOT ignore (intentionally tracked for VPS deploy)
+# db/*.bak is committed to git

@@ -1,19 +1,64 @@
 services:
+
+  # ─── SQL Server 2022 ───────────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: dms-sqlserver
+    environment:
+      SA_PASSWORD: ${SA_PASSWORD:-DmsStr0ng!Pass}
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+      - ./db:/db-init:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost,1433",
+             "-U", "sa", "-P", "${SA_PASSWORD:-DmsStr0ng!Pass}", "-C", "-Q", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── DB restore (runs once, exits) ────────────────────────────────────────
+  db-restore:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: dms-db-restore
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    environment:
+      SA_PASSWORD: ${SA_PASSWORD:-DmsStr0ng!Pass}
+      MSSQL_HOST: sqlserver
+      DB_NAME: ${DB_NAME:-dms_new}
+    volumes:
+      - ./db:/db-init:ro
+    entrypoint: ["/bin/bash", "/db-init/restore.sh"]
+    restart: "no"
+
+  # ─── DMS Application ──────────────────────────────────────────────────────
   dms-app:
     build:
       context: .
       dockerfile: Dockerfile
     image: dms-java:latest
     container_name: dms-app
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      db-restore:
+        condition: service_completed_successfully
     ports:
       - "8080:8080"
     environment:
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT:-1433}
+      DB_HOST: sqlserver
+      DB_PORT: 1433
       DB_NAME: ${DB_NAME:-dms_new}
-      DB_USERNAME: ${DB_USERNAME:-sa}
-      DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET}
+      DB_USERNAME: sa
+      DB_PASSWORD: ${SA_PASSWORD:-DmsStr0ng!Pass}
+      JWT_SECRET: ${JWT_SECRET:-dms-secret-change-me-in-production-min-32-chars-xxxx}
       STORAGE_PATH: /app/storage
       MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
       MAIL_PORT: ${MAIL_PORT:-587}
@@ -23,13 +68,9 @@ services:
     volumes:
       - dms-storage:/app/storage
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
 
 volumes:
+  sql-data:
+    name: dms-sql-data
   dms-storage:
     name: dms-storage
