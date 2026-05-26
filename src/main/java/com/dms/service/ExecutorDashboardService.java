@@ -31,16 +31,17 @@ public class ExecutorDashboardService {
     private final FileStorageService fileStorageService;
     private final DepartmentHierarchyService hierarchyService;
 
-    public PageResponse<LegalAct> listTasks(UserDetailsImpl user, int page, int size) {
+    public PageResponse<LegalAct> listTasks(UserDetailsImpl user, int page, int size, String search) {
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        String s = (search == null || search.isBlank()) ? "" : search;
 
         // executor role: show only their own acts
         if (user.getExecutorId() != null) {
             return PageResponse.from(
-                legalActRepository.findByExecutorIds(Set.of(user.getExecutorId()), pageable));
+                legalActRepository.findByExecutorIdsAndSearch(Set.of(user.getExecutorId()), s, pageable));
         }
 
-        // manager/admin/user: show acts for executors in their visible departments
+        // manager/admin: show acts for executors in their visible departments
         Set<Long> visibleDepts;
         if (user.getRole().equals("admin")) {
             visibleDepts = null; // all
@@ -59,7 +60,7 @@ public class ExecutorDashboardService {
         }
 
         Set<Long> executorIds = executors.stream().map(Executor::getId).collect(Collectors.toSet());
-        return PageResponse.from(legalActRepository.findByExecutorIds(executorIds, pageable));
+        return PageResponse.from(legalActRepository.findByExecutorIdsAndSearch(executorIds, s, pageable));
     }
 
     public LegalAct getTaskDetail(Long legalActId) {

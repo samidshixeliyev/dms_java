@@ -129,13 +129,14 @@ export default function ExecutorDashboard() {
     },
     { header: 'Status', render: (row: LegalAct) => getStatusBadge(row) },
     {
-      header: 'Rolum',
+      header: 'Notlar',
       render: (row: LegalAct) => {
-        const role = getMyRole(row)
-        if (!role) return <span className="text-muted">—</span>
-        return <span className={`badge ${role === 'main' ? 'bg-primary' : 'bg-secondary'}`} style={{ fontSize: '.65rem' }}>
-          {role === 'main' ? 'Əsas' : 'Köməkçi'}
-        </span>
+        const log = row.statusLogs?.[0]
+        if (!log) return <span className="text-muted">—</span>
+        const parts: string[] = []
+        if (log.executionNote?.note) parts.push(log.executionNote.note)
+        if (log.customNote) parts.push(log.customNote)
+        return <span style={{ fontSize: '.74rem' }}>{parts.join(' / ') || '—'}</span>
       },
     },
     {

@@ -43,6 +43,12 @@ export default function LegalActs() {
   const [showFilters, setShowFilters]     = useState(false)
   const [activeFilters, setActiveFilters] = useState<Record<string, any>>({})
 
+  // Keep latest filter/orgId values accessible inside the effect without stale closure
+  const activeFiltersRef = useRef(activeFilters)
+  const orgIdRef = useRef(orgId)
+  useEffect(() => { activeFiltersRef.current = activeFilters }, [activeFilters])
+  useEffect(() => { orgIdRef.current = orgId }, [orgId])
+
   const assignableDepts = departments.filter(d => d.canAssign)
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
@@ -63,8 +69,8 @@ export default function LegalActs() {
   const loadTable = useCallback(async (p: number) => {
     setLoadingTable(true)
     try {
-      const params: any = { page: p, size: PAGE_SIZE, ...activeFilters }
-      if (orgId) params.orgId = orgId
+      const params: any = { page: p, size: PAGE_SIZE, ...activeFiltersRef.current }
+      if (orgIdRef.current) params.orgId = orgIdRef.current
       const res = await client.get('/legal-acts', { params })
       const pageData = res.data.data
       setRows(pageData.data)
@@ -72,18 +78,10 @@ export default function LegalActs() {
     } finally {
       setLoadingTable(false)
     }
-  }, [activeFilters, orgId])
+  }, [])
 
-  useEffect(() => { setPage(0); loadTable(0) }, [refreshKey, loadTable])
-
-  // re-fetch when orgId changes
-  const prevOrgId = useRef(orgId)
-  useEffect(() => {
-    if (prevOrgId.current !== orgId) {
-      prevOrgId.current = orgId
-      setPage(0); loadTable(0)
-    }
-  }, [orgId])
+  // Single effect — only refreshKey drives reloads; dept/filter changes bump refreshKey
+  useEffect(() => { setPage(0); loadTable(0) }, [refreshKey])
 
   const goPage = (p: number) => { setPage(p); loadTable(p) }
 
@@ -237,6 +235,19 @@ export default function LegalActs() {
     )
   }
 
+  const renderStatus = (row: LegalAct) => {
+    const log = row.statusLogs?.[0]
+    if (!log) {
+      if (row.executionDeadline && new Date(row.executionDeadline) < new Date())
+        return <span className="badge badge-rejected" style={{ fontSize: '.7rem', whiteSpace: 'nowrap' }}>Vaxtı keçmiş</span>
+      return <span className="badge bg-secondary" style={{ fontSize: '.7rem' }}>Başlanmayıb</span>
+    }
+    if (log.approvalStatus === 'approved') return <span className="badge badge-executed" style={{ fontSize: '.7rem', whiteSpace: 'nowrap' }}>İcra olunub</span>
+    if (log.approvalStatus === 'pending')  return <span className="badge badge-pending"  style={{ fontSize: '.7rem', whiteSpace: 'nowrap' }}>Gözləmədə</span>
+    if (log.approvalStatus === 'rejected') return <span className="badge badge-rejected" style={{ fontSize: '.7rem', whiteSpace: 'nowrap' }}>Rədd edilib</span>
+    return <span className="badge bg-info" style={{ fontSize: '.7rem' }}>Qeyd var</span>
+  }
+
   const renderNote = (row: LegalAct) => {
     const log = row.statusLogs?.[0]
     const pieces: string[] = []
@@ -275,11 +286,11 @@ export default function LegalActs() {
           <span className="text-muted fw-semibold" style={{ fontSize: '.82rem' }}>İdarə:</span>
           <button
             className={`btn btn-sm ${orgId === null ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setOrgId(null)}>Hamısı</button>
+            onClick={() => { setOrgId(null); setRefreshKey(k => k + 1) }}>Hamısı</button>
           {assignableDepts.map(d => (
             <button key={d.id}
               className={`btn btn-sm ${orgId === d.id ? 'btn-primary' : 'btn-outline-primary'}`}
-              onClick={() => setOrgId(d.id)}>{d.name}</button>
+              onClick={() => { setOrgId(d.id); setRefreshKey(k => k + 1) }}>{d.name}</button>
           ))}
         </div>
       )}
@@ -348,22 +359,25 @@ export default function LegalActs() {
         <div className={detailAct ? 'col-md-7' : 'col-12'}>
           <div className="card p-0">
             <div style={{ overflowX: 'auto' }}>
-              <table className="table table-hover table-bordered mb-0" id="legalActsTable" style={{ minWidth: 860, tableLayout: 'fixed', width: '100%', fontSize: '.78rem' }}>
+              <table className="table table-hover table-bordered mb-0" id="legalActsTable" style={{ minWidth: 920, tableLayout: 'fixed', width: '100%', fontSize: '.78rem' }}>
                 <colgroup>
-                  <col style={{ width: 90 }} />
-                  <col style={{ width: 90 }} />
-                  <col style={{ width: 95 }} />
-                  <col style={{ width: 120 }} />
+                  <col style={{ width: 34 }} />
+                  <col style={{ width: 86 }} />
+                  <col style={{ width: 88 }} />
+                  <col style={{ width: 92 }} />
+                  <col style={{ width: 118 }} />
                   <col />
                   <col />
-                  <col style={{ width: 160 }} />
                   <col style={{ width: 150 }} />
-                  <col style={{ width: 110 }} />
                   <col style={{ width: 140 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 105 }} />
+                  <col style={{ width: 130 }} />
                   {canManage() && <col style={{ width: 36 }} />}
                 </colgroup>
                 <thead>
                   <tr>
+                    <th rowSpan={2} style={{ background: '#1e3a5f', color: '#fff', textAlign: 'center', fontSize: '.72rem', fontWeight: 700, padding: '4px 6px', border: '1px solid rgba(255,255,255,.18)', verticalAlign: 'middle' }}>#</th>
                     <th colSpan={5} style={{ background: '#1e3a5f', color: '#fff', textAlign: 'center', fontSize: '.72rem', fontWeight: 700, padding: '4px 6px', border: '1px solid rgba(255,255,255,.18)' }}>
                       Sənəd Məlumatları
                     </th>
@@ -373,6 +387,7 @@ export default function LegalActs() {
                     <th colSpan={4} style={{ background: '#1e3a5f', color: '#fff', textAlign: 'center', fontSize: '.72rem', fontWeight: 700, padding: '4px 6px', border: '1px solid rgba(255,255,255,.18)' }}>
                       İcraçı Məlumatları
                     </th>
+                    <th rowSpan={2} style={{ background: '#1e3a5f', color: '#fff', textAlign: 'center', fontSize: '.72rem', fontWeight: 700, padding: '4px 6px', border: '1px solid rgba(255,255,255,.18)', verticalAlign: 'middle' }}>Status</th>
                     {canManage() && (
                       <th rowSpan={2} style={{ background: '#1e3a5f', border: '1px solid rgba(255,255,255,.18)', position: 'sticky', right: 0, zIndex: 4 }} />
                     )}
@@ -388,18 +403,19 @@ export default function LegalActs() {
                 <tbody>
                   {loadingTable ? (
                     <tr>
-                      <td colSpan={canManage() ? 11 : 10} className="text-center py-5">
+                      <td colSpan={canManage() ? 13 : 12} className="text-center py-5">
                         <div className="spinner-border text-secondary" style={{ width: '1.25rem', height: '1.25rem' }} />
                       </td>
                     </tr>
                   ) : rows.length === 0 ? (
                     <tr>
-                      <td colSpan={canManage() ? 11 : 10} className="dt-empty">
+                      <td colSpan={canManage() ? 13 : 12} className="dt-empty">
                         <i className="bi bi-inbox dt-empty-icon" /><div>Məlumat tapılmadı</div>
                       </td>
                     </tr>
-                  ) : rows.map(row => (
+                  ) : rows.map((row, ri) => (
                     <tr key={row.id} className={getRowClass(row)} style={{ cursor: 'pointer' }} onClick={() => openDetail(row)}>
+                      <td style={{ textAlign: 'center', padding: '4px 6px', verticalAlign: 'middle', color: '#64748b', fontSize: '.72rem', fontWeight: 600 }}>{page * PAGE_SIZE + ri + 1}</td>
                       <td style={{ textAlign: 'center', padding: '4px 6px', verticalAlign: 'middle' }}>
                         {row.actType?.name
                           ? <span className="badge" style={{ background: '#1e3a5f', fontSize: '.74rem', whiteSpace: 'normal', lineHeight: 1.2 }}>{row.actType.name}</span>
@@ -414,6 +430,7 @@ export default function LegalActs() {
                       <td style={{ padding: '4px 6px', verticalAlign: 'middle' }}>{renderDepartments(row)}</td>
                       <td style={{ textAlign: 'center', padding: '4px 6px', verticalAlign: 'middle' }}>{renderDeadline(row)}</td>
                       <td style={{ padding: '4px 6px', verticalAlign: 'middle' }}>{renderNote(row)}</td>
+                      <td style={{ textAlign: 'center', padding: '4px 6px', verticalAlign: 'middle' }}>{renderStatus(row)}</td>
                       {canManage() && (
                         <td style={{ textAlign: 'center', padding: '4px 2px', verticalAlign: 'middle', position: 'sticky', right: 0, background: '#fff', boxShadow: '-2px 0 4px rgba(0,0,0,.06)', zIndex: 3 }}
                           onClick={e => e.stopPropagation()}>

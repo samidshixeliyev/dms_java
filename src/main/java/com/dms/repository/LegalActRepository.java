@@ -33,4 +33,12 @@ public interface LegalActRepository extends JpaRepository<LegalAct, Long>, JpaSp
 
     @Query("SELECT DISTINCT la FROM LegalAct la JOIN la.executorLinks el WHERE el.executorId IN :executorIds")
     Page<LegalAct> findByExecutorIds(@Param("executorIds") Collection<Long> executorIds, Pageable pageable);
+
+    @Query("SELECT DISTINCT la FROM LegalAct la JOIN la.executorLinks el WHERE el.executorId IN :executorIds " +
+           "AND (:search IS NULL OR :search = '' " +
+           "OR LOWER(la.legalActNumber) LIKE LOWER(CONCAT('%',:search,'%')) " +
+           "OR LOWER(la.summary) LIKE LOWER(CONCAT('%',:search,'%')))")
+    Page<LegalAct> findByExecutorIdsAndSearch(@Param("executorIds") Collection<Long> executorIds,
+                                               @Param("search") String search,
+                                               Pageable pageable);
 }

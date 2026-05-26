@@ -164,32 +164,38 @@ sudo ufw allow 1433/tcp   # only if you need direct SQL Server access from outsi
 
 ---
 
-## Nginx reverse proxy (optional, for port 80/443)
+## Nginx reverse proxy with HTTPS
+
+Nginx is included in `docker-compose.yml` and listens on ports 80 (redirect) and 443 (HTTPS).
+Before starting, generate a self-signed TLS certificate:
 
 ```bash
-sudo apt install nginx -y
-sudo nano /etc/nginx/sites-available/dms
+# On the VPS, from the project root:
+bash nginx/gen-ssl.sh
 ```
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-
-    client_max_body_size 50M;
-
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-}
-```
+This creates `nginx/ssl/cert.pem` and `nginx/ssl/key.pem` (10-year self-signed cert).
+Then start normally:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/dms /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
+docker compose up --build -d
+```
+
+Access the app at `https://<your-vps-ip>` (browser will warn about self-signed cert — click Advanced → Proceed).
+
+### Using a real domain with Let's Encrypt
+
+If you have a domain pointing to this server:
+
+```bash
+sudo apt install certbot -y
+sudo certbot certonly --standalone -d your-domain.com
+# Copy certs to nginx/ssl/
+sudo cp /etc/letsencrypt/live/your-domain.com/fullchain.pem nginx/ssl/cert.pem
+sudo cp /etc/letsencrypt/live/your-domain.com/privkey.pem nginx/ssl/key.pem
+# Update nginx.conf server_name
+sed -i 's/server_name _;/server_name your-domain.com;/' nginx/nginx.conf
+docker compose restart nginx
 ```
 
 ---

@@ -28,8 +28,9 @@ public class ExecutorDashboardController {
     public ResponseEntity<ApiResponse<PageResponse<LegalAct>>> list(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "25") int size) {
-        return ResponseEntity.ok(ApiResponse.ok(dashboardService.listTasks(user, page, size)));
+            @RequestParam(defaultValue = "25") int size,
+            @RequestParam(defaultValue = "") String search) {
+        return ResponseEntity.ok(ApiResponse.ok(dashboardService.listTasks(user, page, size, search)));
     }
 
     @GetMapping("/legal-acts/{id}")
