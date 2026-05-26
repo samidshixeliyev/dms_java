@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import client from '../api/client'
+import toast from 'react-hot-toast'
 import type { ReportStat, Department } from '../types/index'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
@@ -29,9 +30,21 @@ export default function Reports() {
 
   const handleFilter = () => loadReport(deptId || undefined)
 
-  const exportExcel = () => {
-    const params = deptId ? `?deptId=${deptId}` : ''
-    window.open(`/api/reports/export-excel${params}`, '_blank')
+  const exportExcel = async () => {
+    try {
+      const res = await client.get('/reports/export-excel', {
+        params: deptId ? { deptId } : {},
+        responseType: 'blob',
+      })
+      const href = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = href
+      a.download = 'hesabat.xlsx'
+      a.click()
+      URL.revokeObjectURL(href)
+    } catch {
+      toast.error('Excel yüklənmədi')
+    }
   }
 
   const totals = stats.reduce(

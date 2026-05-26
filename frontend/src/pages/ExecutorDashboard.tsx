@@ -6,6 +6,20 @@ import type { LegalAct, ExecutionNote, PageResponse } from '../types'
 import { useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 
+async function downloadBlob(url: string, filename: string) {
+  try {
+    const res = await client.get(url, { responseType: 'blob' })
+    const href = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = href
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(href)
+  } catch {
+    toast.error('Fayl yüklənmədi')
+  }
+}
+
 export default function ExecutorDashboard() {
   const { user } = useAuth()
   const [selectedAct, setSelectedAct] = useState<LegalAct | null>(null)
@@ -268,13 +282,12 @@ export default function ExecutorDashboard() {
                         {log.attachments && log.attachments.length > 0 && (
                           <div className="mt-1 d-flex flex-wrap gap-1">
                             {log.attachments.map(att => (
-                              <a key={att.id}
-                                href={`/api/executor/attachments/${att.id}/download`}
-                                className="badge bg-light text-dark text-decoration-none"
-                                style={{ fontSize: '.72rem' }}
-                                download>
+                              <button key={att.id}
+                                className="badge bg-light text-dark border-0"
+                                style={{ fontSize: '.72rem', cursor: 'pointer' }}
+                                onClick={() => downloadBlob(`/executor/attachments/${att.id}/download`, att.originalName)}>
                                 <i className="bi bi-paperclip me-1" />{att.originalName}
-                              </a>
+                              </button>
                             ))}
                           </div>
                         )}
