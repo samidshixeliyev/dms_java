@@ -1,5 +1,6 @@
 package com.dms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,6 +21,7 @@ public class LegalActExecutorLink {
     @Column(name = "executor_id")
     private Long executorId;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "legal_act_id", insertable = false, updatable = false)
     private LegalAct legalAct;

@@ -63,25 +63,31 @@ export default function Users() {
   }
 
   const columns = [
+    { header: 'Ad', render: (row: User) => row.name ?? '—' },
+    { header: 'Soyad', render: (row: User) => row.surname ?? '—' },
     { header: 'İstifadəçi adı', render: (row: User) => <span className="fw-semibold">{row.username}</span> },
-    { header: 'Ad Soyad', render: (row: User) => `${row.name ?? ''} ${row.surname ?? ''}` },
-    { header: 'Email', render: (row: User) => row.email ?? '-' },
+    { header: 'E-poçt', render: (row: User) => row.email ?? '—' },
     {
       header: 'Rol',
       render: (row: User) => {
-        const labels: Record<string, string> = { admin: 'Admin', manager: 'Menecer', user: 'İstifadəçi', executor: 'İcraçı' }
-        return <span className="badge bg-secondary">{labels[row.userRole] ?? row.userRole}</span>
+        const map: Record<string, [string, string]> = { admin: ['Admin', 'bg-danger'], manager: ['Menecer', 'bg-primary'], user: ['İstifadəçi', 'bg-secondary'], executor: ['İcraçı', 'bg-success'] }
+        const [label, cls] = map[row.userRole] ?? [row.userRole, 'bg-secondary']
+        return <span className={`badge ${cls}`}>{label}</span>
       },
     },
+    { header: 'Rəhbər icraçı', render: (row: User) => executors.find(e => e.id === row.executorId)?.name ?? '—' },
+    { header: 'İdarə', render: (row: User) => departments.find(d => d.id === row.departmentId)?.name ?? '—' },
     {
       header: '',
       render: (row: User) => (
-        <div className="d-flex gap-1">
-          <button className="btn btn-xs btn-outline-primary py-0 px-1" onClick={() => openEdit(row)}>
-            <i className="bi bi-pencil" />
+        <div className="d-flex gap-1" style={{ justifyContent: 'center' }}>
+          <button className="btn btn-sm btn-warning" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Düzəlt" onClick={() => openEdit(row)}>
+            <i className="bi bi-pencil" style={{ fontSize: '.8rem' }} />
           </button>
-          <button className="btn btn-xs btn-outline-danger py-0 px-1" onClick={() => handleDelete(row.id)}>
-            <i className="bi bi-trash" />
+          <button className="btn btn-sm btn-danger" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Sil" onClick={() => handleDelete(row.id)}>
+            <i className="bi bi-trash" style={{ fontSize: '.8rem' }} />
           </button>
         </div>
       ),

@@ -96,46 +96,73 @@ export default function ExecutorDashboard() {
     return !!(act.statusLogs?.[0]?.approvalStatus === 'pending')
   }
 
+  const getRowClass = (row: LegalAct) => {
+    const log = row.statusLogs?.[0]
+    if (log?.approvalStatus === 'approved') return 'row-executed'
+    if (log?.approvalStatus === 'rejected') return 'row-overdue'
+    if (log?.approvalStatus === 'pending') return 'row-pending'
+    if (row.executionDeadline && new Date(row.executionDeadline) < new Date()) return 'row-overdue'
+    return ''
+  }
+
   const columns = [
     {
-      header: 'Nömrə',
-      render: (row: LegalAct) => (
-        <span className="fw-semibold">
-          {row.legalActNumber}
-          {getMyRole(row) && (
-            <span className={`badge ms-2 ${getMyRole(row) === 'main' ? 'bg-primary' : 'bg-secondary'}`} style={{ fontSize: '.65rem' }}>
-              {getMyRole(row) === 'main' ? 'Əsas' : 'Köməkçi'}
-            </span>
-          )}
-        </span>
-      ),
+      header: 'Növü',
+      render: (row: LegalAct) => row.actType?.name
+        ? <span className="badge" style={{ background: '#1e3a5f', fontSize: '.74rem', whiteSpace: 'normal', lineHeight: 1.2 }}>{row.actType.name}</span>
+        : <span className="text-muted">—</span>,
     },
-    { header: 'Tarix', render: (row: LegalAct) => row.legalActDate?.substring(0, 10) },
-    { header: 'Son tarix', render: (row: LegalAct) => row.executionDeadline?.substring(0, 10) ?? '-' },
-    { header: 'Xülasə', render: (row: LegalAct) => <span title={row.summary ?? ''}>{row.summary?.substring(0, 60) ?? '-'}</span> },
+    {
+      header: 'Nömrə',
+      render: (row: LegalAct) => <span className="fw-semibold">{row.legalActNumber}</span>,
+    },
+    { header: 'Tarixi', render: (row: LegalAct) => <span style={{ whiteSpace: 'nowrap', fontSize: '.76rem' }}>{row.legalActDate?.substring(0, 10)}</span> },
+    { header: 'Kim Qəbul Edib', render: (row: LegalAct) => <span style={{ fontSize: '.76rem' }}>{row.issuedBy?.name ?? '—'}</span> },
+    { header: 'Qısa Məzmun', render: (row: LegalAct) => <span title={row.summary ?? ''} style={{ fontSize: '.76rem' }}>{row.summary?.substring(0, 60) ?? '—'}</span> },
+    {
+      header: 'İcra Müddəti',
+      render: (row: LegalAct) => row.executionDeadline ? (
+        <span style={{ whiteSpace: 'nowrap', fontSize: '.76rem', color: new Date(row.executionDeadline) < new Date() ? '#dc2626' : undefined, fontWeight: new Date(row.executionDeadline) < new Date() ? 600 : undefined }}>
+          {row.executionDeadline.substring(0, 10)}
+        </span>
+      ) : <span className="text-muted">—</span>,
+    },
     { header: 'Status', render: (row: LegalAct) => getStatusBadge(row) },
+    {
+      header: 'Rolum',
+      render: (row: LegalAct) => {
+        const role = getMyRole(row)
+        if (!role) return <span className="text-muted">—</span>
+        return <span className={`badge ${role === 'main' ? 'bg-primary' : 'bg-secondary'}`} style={{ fontSize: '.65rem' }}>
+          {role === 'main' ? 'Əsas' : 'Köməkçi'}
+        </span>
+      },
+    },
     {
       header: '',
       render: (row: LegalAct) => (
-        <div className="d-flex gap-1" onClick={e => e.stopPropagation()}>
-          <button className="btn btn-xs btn-outline-primary py-0 px-1" onClick={e => openStatusModal(row, e)}>
-            <i className="bi bi-send" /> Status
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center', justifyContent: 'center' }} onClick={e => e.stopPropagation()}>
+          <button className="btn btn-sm btn-info" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Bax" onClick={e => { e.stopPropagation(); loadDetail(row) }}>
+            <i className="bi bi-eye" style={{ fontSize: '.8rem' }} />
+          </button>
+          <button className="btn btn-sm btn-primary" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Status göndər" onClick={e => openStatusModal(row, e)}>
+            <i className="bi bi-send" style={{ fontSize: '.8rem' }} />
           </button>
           {hasPendingOwnLog(row) && (
             <button
-              className="btn btn-xs btn-outline-warning py-0 px-1"
+              className="btn btn-sm btn-warning"
+              style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
               onClick={e => handleWithdraw(row, e)}
               disabled={withdrawing === row.id}
               title="Geri al"
             >
               {withdrawing === row.id
-                ? <span className="spinner-border spinner-border-sm" />
-                : <i className="bi bi-arrow-counterclockwise" />}
+                ? <span className="spinner-border spinner-border-sm" style={{ width: 12, height: 12 }} />
+                : <i className="bi bi-arrow-counterclockwise" style={{ fontSize: '.8rem' }} />}
             </button>
           )}
-          <button className="btn btn-xs btn-outline-secondary py-0 px-1" onClick={e => { e.stopPropagation(); loadDetail(row) }}>
-            <i className="bi bi-eye" />
-          </button>
         </div>
       ),
     },
@@ -152,17 +179,19 @@ export default function ExecutorDashboard() {
       <div className="row g-3">
         <div className={detail ? 'col-md-7' : 'col-12'}>
           <div className="card">
-            <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} onRowClick={loadDetail} />
+            <DataTable columns={columns} fetchData={fetchData} refreshKey={refreshKey} onRowClick={loadDetail} rowClassName={getRowClass} />
           </div>
         </div>
 
         {detail && (
           <div className="col-md-5">
             <div className="card">
-              <div className="card-header d-flex justify-content-between align-items-center">
-                <span>Tapşırıq #{detail.legalActNumber}</span>
+              <div className="card-header d-flex justify-content-between align-items-center" style={{ background: 'var(--primary)', color: '#fff', padding: '10px 16px' }}>
+                <span className="fw-semibold" style={{ fontSize: '.9rem' }}>
+                  <i className="bi bi-file-earmark-text me-2" />Tapşırıq #{detail.legalActNumber}
+                </span>
                 <button
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '1.1rem', padding: 0 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#fff', fontSize: '1.1rem', padding: 0 }}
                   onClick={() => setDetail(null)}
                 >
                   <i className="bi bi-x-lg" />
@@ -172,6 +201,8 @@ export default function ExecutorDashboard() {
                 <dl className="row small mb-3" style={{ rowGap: '.3rem' }}>
                   <dt className="col-5 text-muted fw-semibold">Akt tarixi</dt>
                   <dd className="col-7 mb-0">{detail.legalActDate?.substring(0, 10)}</dd>
+                  {detail.actType && <><dt className="col-5 text-muted fw-semibold">Növ</dt><dd className="col-7 mb-0">{detail.actType.name}</dd></>}
+                  {detail.issuedBy && <><dt className="col-5 text-muted fw-semibold">Kim qəbul edib</dt><dd className="col-7 mb-0">{detail.issuedBy.name}</dd></>}
                   <dt className="col-5 text-muted fw-semibold">Son tarix</dt>
                   <dd className="col-7 mb-0">{detail.executionDeadline?.substring(0, 10) ?? '—'}</dd>
                   <dt className="col-5 text-muted fw-semibold">Sübut tələbi</dt>
@@ -184,6 +215,12 @@ export default function ExecutorDashboard() {
                     <>
                       <dt className="col-5 text-muted fw-semibold">Xülasə</dt>
                       <dd className="col-7 mb-0">{detail.summary}</dd>
+                    </>
+                  )}
+                  {detail.taskNumber && (
+                    <>
+                      <dt className="col-5 text-muted fw-semibold">Qeyd</dt>
+                      <dd className="col-7 mb-0">{detail.taskNumber}</dd>
                     </>
                   )}
                 </dl>
@@ -226,13 +263,14 @@ export default function ExecutorDashboard() {
                              log.approvalStatus === 'pending' ? 'Gözləmədə' : log.approvalStatus}
                           </span>
                         )}
+                        {log.approvalNote && <div className="text-muted fst-italic">{log.approvalNote}</div>}
                         {log.attachments && log.attachments.length > 0 && (
                           <div className="mt-1 d-flex flex-wrap gap-1">
                             {log.attachments.map(att => (
                               <a key={att.id}
                                 href={`/api/executor/attachments/${att.id}/download`}
-                                className="badge bg-light"
-                                style={{ textDecoration: 'none', fontSize: '.72rem' }}
+                                className="badge bg-light text-dark text-decoration-none"
+                                style={{ fontSize: '.72rem' }}
                                 download>
                                 <i className="bi bi-paperclip me-1" />{att.originalName}
                               </a>
@@ -299,7 +337,7 @@ export default function ExecutorDashboard() {
               <div className="modal-footer">
                 <button className="btn btn-secondary btn-sm" onClick={() => setShowStatusModal(false)}>Ləğv et</button>
                 <button className="btn btn-primary btn-sm" onClick={submitStatus} disabled={saving}>
-                  {saving ? <span className="spinner-border spinner-border-sm" /> : <i className="bi bi-send" />}
+                  {saving ? <span className="spinner-border spinner-border-sm me-1" /> : <i className="bi bi-send me-1" />}
                   Göndər
                 </button>
               </div>

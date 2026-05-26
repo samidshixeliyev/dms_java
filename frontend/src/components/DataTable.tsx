@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { PageResponse } from '../types'
 
 interface Column<T> {
@@ -18,10 +18,12 @@ interface Props<T> {
   toolbar?: React.ReactNode
   /** Page size, defaults to 25 */
   pageSize?: number
+  /** Optional custom thead element to replace the default one */
+  customThead?: React.ReactNode
 }
 
 export default function DataTable<T extends { id?: number | string | object }>({
-  columns, fetchData, rowClassName, onRowClick, refreshKey = 0, toolbar, pageSize = 25
+  columns, fetchData, rowClassName, onRowClick, refreshKey = 0, toolbar, pageSize = 25, customThead
 }: Props<T>) {
   const [data, setData] = useState<T[]>([])
   const [total, setTotal] = useState(0)
@@ -30,6 +32,7 @@ export default function DataTable<T extends { id?: number | string | object }>({
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [searchInput, setSearchInput] = useState('')
+  const isFirstRender = useRef(true)
 
   const load = useCallback(async (p: number, s: string) => {
     setLoading(true)
@@ -45,6 +48,7 @@ export default function DataTable<T extends { id?: number | string | object }>({
   useEffect(() => { load(0, '') }, [refreshKey])
 
   useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
     const t = setTimeout(() => {
       setPage(0)
       setSearch(searchInput)
@@ -83,14 +87,26 @@ export default function DataTable<T extends { id?: number | string | object }>({
 
       {/* Table */}
       <div className="table-responsive">
-        <table className="table table-hover dt-table mb-0">
-          <thead>
-            <tr>
-              {columns.map((c, i) => (
-                <th key={i} className={c.className}>{c.header}</th>
-              ))}
-            </tr>
-          </thead>
+        <table className="table table-hover table-bordered dt-table mb-0">
+          {customThead ?? (
+            <thead>
+              <tr>
+                {columns.map((c, i) => (
+                  <th key={i} className={c.className} style={{
+                    background: (c.header === '' && i === columns.length - 1) ? '#374151' : '#1e3a5f',
+                    color: '#fff',
+                    textAlign: 'center',
+                    padding: '6px 8px',
+                    fontSize: '.78rem',
+                    fontWeight: 700,
+                    whiteSpace: 'nowrap',
+                    border: '1px solid rgba(255,255,255,.15)',
+                    verticalAlign: 'middle',
+                  }}>{c.header}</th>
+                ))}
+              </tr>
+            </thead>
+          )}
           <tbody>
             {loading ? (
               <tr>

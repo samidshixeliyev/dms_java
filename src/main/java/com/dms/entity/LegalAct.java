@@ -1,6 +1,7 @@
 package com.dms.entity;
 
 import com.dms.converter.StringBooleanConverter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
@@ -88,15 +89,18 @@ public class LegalAct {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @JsonIgnoreProperties({"legalAct"})
     @OneToMany(mappedBy = "legalAct", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @OrderBy("createdAt DESC")
     @Builder.Default
     private List<ExecutorStatusLog> statusLogs = new ArrayList<>();
 
+    @JsonIgnoreProperties({"legalAct"})
     @OneToMany(mappedBy = "legalAct", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<LegalActExecutorLink> executorLinks = new ArrayList<>();
 
+    @JsonIgnoreProperties({"legalAct", "statusLog"})
     @OneToMany(mappedBy = "legalAct", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default
     private List<ExecutionAttachment> attachments = new ArrayList<>();

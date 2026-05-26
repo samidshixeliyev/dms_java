@@ -1,5 +1,6 @@
 package com.dms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -54,6 +55,7 @@ public class ExecutorStatusLog {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @JsonIgnoreProperties({"statusLog", "legalAct"})
     @OneToMany(mappedBy = "statusLog", fetch = FetchType.LAZY)
     @Builder.Default
     private List<ExecutionAttachment> attachments = new ArrayList<>();

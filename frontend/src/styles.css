@@ -338,6 +338,13 @@ body {
 }
 .btn-warning:hover { box-shadow: 0 4px 14px rgba(255,209,102,.5); color: var(--text-primary); }
 
+.btn-dark {
+  background: #1e3a5f;
+  border-color: #1e3a5f;
+  color: #fff;
+}
+.btn-dark:hover { background: #152a46; color: #fff; }
+
 .btn-info {
   background: linear-gradient(135deg, #0096c7, #00b4d8);
   color: #fff;

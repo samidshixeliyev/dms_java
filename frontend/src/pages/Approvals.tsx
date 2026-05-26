@@ -4,6 +4,18 @@ import client from '../api/client'
 import toast from 'react-hot-toast'
 import type { ExecutorStatusLog, LegalAct, PageResponse } from '../types'
 
+const thStyle: React.CSSProperties = {
+  background: '#1e3a5f',
+  color: '#fff',
+  textAlign: 'center',
+  padding: '6px 8px',
+  fontSize: '.78rem',
+  fontWeight: 700,
+  whiteSpace: 'nowrap',
+  border: '1px solid rgba(255,255,255,.15)',
+  verticalAlign: 'middle',
+}
+
 export default function Approvals() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [rejectModal, setRejectModal] = useState<{ open: boolean; id: number | null }>({ open: false, id: null })
@@ -29,9 +41,9 @@ export default function Approvals() {
   const openReject = (id: number) => { setRejectModal({ open: true, id }); setRejectNote('') }
 
   const confirmReject = async () => {
-    if (!rejectNote.trim()) { toast.error('Rədd etmə səbəbi daxil edin'); return }
+    if (!rejectNote.trim()) { toast.error('İmtina səbəbi daxil edin'); return }
     await client.post(`/approvals/${rejectModal.id}/reject`, { note: rejectNote })
-    toast.success('Rədd edildi')
+    toast.success('İmtina edildi')
     setRejectModal({ open: false, id: null })
     setRefreshKey(k => k + 1)
   }
@@ -42,57 +54,80 @@ export default function Approvals() {
     setDetail(res.data.data)
   }
 
+  const renderDeadline = (row: ExecutorStatusLog) => {
+    const d = row.legalAct?.executionDeadline
+    if (!d) return <span className="text-muted">—</span>
+    const isOverdue = new Date(d) < new Date()
+    return <span style={{ color: isOverdue ? '#dc2626' : undefined, fontWeight: isOverdue ? 600 : undefined, whiteSpace: 'nowrap' }}>{d.substring(0, 10)}</span>
+  }
+
   const columns = [
     {
-      header: 'Akt nömrəsi',
+      header: 'Növü',
+      render: (row: ExecutorStatusLog) => row.legalAct?.actType?.name
+        ? <span className="badge" style={{ background: '#1e3a5f', fontSize: '.74rem', whiteSpace: 'normal', lineHeight: 1.2 }}>{row.legalAct.actType.name}</span>
+        : <span className="text-muted">—</span>,
+    },
+    {
+      header: 'Nömrəsi',
       render: (row: ExecutorStatusLog) => (
-        <span
-          className="fw-semibold text-primary"
-          style={{ cursor: 'pointer' }}
-          onClick={() => loadDetail(row)}
-        >
+        <span className="fw-semibold" style={{ cursor: 'pointer', color: '#1e3a5f' }} onClick={() => loadDetail(row)}>
           {row.legalAct?.legalActNumber}
         </span>
       ),
     },
-    { header: 'İcraçı', render: (row: ExecutorStatusLog) => `${row.user?.name ?? ''} ${row.user?.surname ?? ''}` },
-    { header: 'İcra qeydi', render: (row: ExecutorStatusLog) => row.executionNote?.note },
-    { header: 'Əlavə qeyd', render: (row: ExecutorStatusLog) => row.customNote ?? '-' },
-    { header: 'Tarix', render: (row: ExecutorStatusLog) => new Date(row.createdAt).toLocaleDateString('az') },
+    { header: 'Tarixi', render: (row: ExecutorStatusLog) => <span style={{ whiteSpace: 'nowrap', fontSize: '.78rem' }}>{row.legalAct?.legalActDate?.substring(0, 10) ?? '—'}</span> },
+    { header: 'Qısa Məzmun', render: (row: ExecutorStatusLog) => <span style={{ fontSize: '.78rem' }}>{row.legalAct?.summary ?? '—'}</span> },
+    { header: 'İcraçı', render: (row: ExecutorStatusLog) => `${row.user?.name ?? ''} ${row.user?.surname ?? ''}`.trim() || '—' },
+    { header: 'İcra Qeydi', render: (row: ExecutorStatusLog) => row.executionNote?.note ?? '—' },
+    { header: 'Göndərilmə Tarixi', render: (row: ExecutorStatusLog) => <span style={{ whiteSpace: 'nowrap', fontSize: '.78rem' }}>{new Date(row.createdAt).toLocaleDateString('az')}</span> },
     {
-      header: '',
+      header: 'Sənədlər',
+      render: (row: ExecutorStatusLog) => row.attachments && row.attachments.length > 0
+        ? <span className="badge bg-primary">{row.attachments.length} fayl</span>
+        : <span className="badge bg-secondary">Yoxdur</span>,
+    },
+    { header: 'İcra Müddəti', render: renderDeadline },
+    {
+      header: 'Əməliyyat',
       render: (row: ExecutorStatusLog) => (
-        <div className="d-flex gap-1" onClick={e => e.stopPropagation()}>
-          <button className="btn btn-sm btn-success py-0" onClick={() => openApprove(row.id)}>
-            <i className="bi bi-check-lg" /> Təsdiqlə
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+          <button className="btn btn-sm btn-info" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Bax" onClick={() => loadDetail(row)}>
+            <i className="bi bi-eye" style={{ fontSize: '.8rem' }} />
           </button>
-          <button className="btn btn-sm btn-danger py-0" onClick={() => openReject(row.id)}>
-            <i className="bi bi-x-lg" /> Rədd et
+          <button className="btn btn-sm btn-success" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Təsdiqlə" onClick={() => openApprove(row.id)}>
+            <i className="bi bi-check-lg" style={{ fontSize: '.8rem' }} />
           </button>
-          {row.attachments && row.attachments.length > 0 && (
-            <a href={`/api/executor/attachments/${row.attachments[0].id}/preview`}
-               target="_blank" rel="noreferrer"
-               className="btn btn-sm btn-outline-secondary py-0">
-              <i className="bi bi-eye" />
-            </a>
-          )}
+          <button className="btn btn-sm btn-danger" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="İmtina et" onClick={() => openReject(row.id)}>
+            <i className="bi bi-x-lg" style={{ fontSize: '.8rem' }} />
+          </button>
         </div>
       ),
     },
   ]
 
+  // Custom thead renderer for dark header
+  const customThead = (
+    <thead>
+      <tr>
+        {columns.map((c, i) => <th key={i} style={thStyle}>{c.header}</th>)}
+      </tr>
+    </thead>
+  )
+
   return (
     <>
       <div className="page-header">
-        <div className="page-title">
-          <i className="bi bi-check2-square" />Gözləmədə olan Təsdiqləmələr
-        </div>
+        <div className="page-title"><i className="bi bi-check2-square" />Təsdiq Gözləyənlər</div>
       </div>
 
       <div className="row g-3">
         <div className={detail ? 'col-md-7' : 'col-12'}>
           <div className="card">
-            <DataTable columns={columns} fetchData={fetchData as any} refreshKey={refreshKey} />
+            <DataTable columns={columns} fetchData={fetchData as any} refreshKey={refreshKey} customThead={customThead} />
           </div>
         </div>
 
@@ -133,7 +168,7 @@ export default function Approvals() {
                       {detail.executorLinks.map(lnk => (
                         <li key={lnk.id} className="d-flex align-items-center gap-2 mb-1">
                           <span className={`badge ${lnk.role === 'main' ? 'bg-primary' : 'bg-secondary'}`}>
-                            {lnk.role === 'main' ? 'Əsas' : 'Köməkçi'}
+                            {lnk.role === 'main' ? 'Əsas' : 'Digər'}
                           </span>
                           <span>{lnk.executor?.name}</span>
                         </li>
@@ -161,9 +196,7 @@ export default function Approvals() {
                       </div>
                     </div>
                   ))}
-                  {!detail.statusLogs?.length && (
-                    <p className="text-muted small">Heç bir qeyd yoxdur</p>
-                  )}
+                  {!detail.statusLogs?.length && <p className="text-muted small">Heç bir qeyd yoxdur</p>}
                 </div>
               </div>
             </div>
@@ -176,13 +209,14 @@ export default function Approvals() {
         <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header header-info">
-                <h5 className="modal-title"><i className="bi bi-check-circle me-2" />Təsdiqlə</h5>
-                <button className="btn-close" onClick={() => setApproveModal({ open: false, id: null })} />
+              <div className="modal-header" style={{ background: 'linear-gradient(135deg,#059669,#06d6a0)', color: '#fff' }}>
+                <h5 className="modal-title"><i className="bi bi-check-circle me-2" />İcranı Təsdiqlə</h5>
+                <button className="btn-close btn-close-white" onClick={() => setApproveModal({ open: false, id: null })} />
               </div>
               <div className="modal-body">
-                <label className="form-label">Qeyd (istəyə bağlı)</label>
-                <textarea className="form-control" rows={3} placeholder="Təsdiqləmə qeydi..."
+                <p>Bu sənədin icrasını təsdiqləmək istəyirsiniz?</p>
+                <label className="form-label">Qeyd (ixtiyari)</label>
+                <textarea className="form-control" rows={3} placeholder="Təsdiq qeydini yazın..."
                   value={approveNote} onChange={e => setApproveNote(e.target.value)} />
               </div>
               <div className="modal-footer">
@@ -201,20 +235,20 @@ export default function Approvals() {
         <div className="modal show d-block" style={{ background: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
             <div className="modal-content">
-              <div className="modal-header header-danger">
-                <h5 className="modal-title"><i className="bi bi-x-circle me-2" />Rədd etmə səbəbi</h5>
-                <button className="btn-close" onClick={() => setRejectModal({ open: false, id: null })} />
+              <div className="modal-header" style={{ background: 'linear-gradient(135deg,#d63384,#ef476f)', color: '#fff' }}>
+                <h5 className="modal-title"><i className="bi bi-x-circle me-2" />İcranı İmtina Et</h5>
+                <button className="btn-close btn-close-white" onClick={() => setRejectModal({ open: false, id: null })} />
               </div>
               <div className="modal-body">
-                <textarea className="form-control" rows={4} placeholder="Rədd etmə səbəbini daxil edin..."
+                <p className="text-danger fw-semibold">İcraçı yenidən status təyin edəcək.</p>
+                <label className="form-label">İmtina səbəbi <span className="text-danger">*</span></label>
+                <textarea className="form-control" rows={4} placeholder="İmtina səbəbini mütləq yazın..."
                   value={rejectNote} onChange={e => setRejectNote(e.target.value)} />
               </div>
               <div className="modal-footer">
-                <button className="btn btn-secondary btn-sm" onClick={() => setRejectModal({ open: false, id: null })}>
-                  Ləğv et
-                </button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setRejectModal({ open: false, id: null })}>Ləğv et</button>
                 <button className="btn btn-danger btn-sm" onClick={confirmReject}>
-                  <i className="bi bi-x-lg me-1" />Rədd et
+                  <i className="bi bi-x-lg me-1" />İmtina Et
                 </button>
               </div>
             </div>

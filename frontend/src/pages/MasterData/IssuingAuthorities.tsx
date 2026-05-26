@@ -41,9 +41,15 @@ export default function IssuingAuthorities() {
     {
       header: '',
       render: (row: IssuingAuthority) => (
-        <div className="d-flex gap-1">
-          <button className="btn btn-xs btn-outline-primary py-0 px-1" onClick={() => openEdit(row)}><i className="bi bi-pencil" /></button>
-          <button className="btn btn-xs btn-outline-danger py-0 px-1" onClick={() => handleDelete(row.id)}><i className="bi bi-trash" /></button>
+        <div className="d-flex gap-1" style={{ justifyContent: 'center' }}>
+          <button className="btn btn-sm btn-warning" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Düzəlt" onClick={() => openEdit(row)}>
+            <i className="bi bi-pencil" style={{ fontSize: '.8rem' }} />
+          </button>
+          <button className="btn btn-sm btn-danger" style={{ width: 26, height: 26, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}
+            title="Sil" onClick={() => handleDelete(row.id)}>
+            <i className="bi bi-trash" style={{ fontSize: '.8rem' }} />
+          </button>
         </div>
       ),
     },

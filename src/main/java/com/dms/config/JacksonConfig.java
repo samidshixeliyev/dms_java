@@ -11,6 +11,7 @@ public class JacksonConfig {
     public Hibernate6Module hibernate6Module() {
         Hibernate6Module module = new Hibernate6Module();
         module.disable(Hibernate6Module.Feature.USE_TRANSIENT_ANNOTATION);
+        module.enable(Hibernate6Module.Feature.FORCE_LAZY_LOADING);
         return module;
     }
 }

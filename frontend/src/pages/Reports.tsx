@@ -89,19 +89,12 @@ export default function Reports() {
       {/* Table */}
       <div className="card">
         <div className="table-responsive">
-          <table className="table table-hover mb-0">
+          <table className="table table-hover table-bordered mb-0">
             <thead>
               <tr>
-                <th>İcraçı</th>
-                <th>Şöbə</th>
-                <th className="text-center">Ümumi</th>
-                <th className="text-center">İcra olunub</th>
-                <th className="text-center">Gözləmədə</th>
-                <th className="text-center">Rədd edilib</th>
-                <th className="text-center">Davam edir</th>
-                <th className="text-center">Başlanmayıb</th>
-                <th className="text-center">Vaxtı keçmiş</th>
-                <th className="text-center">İcra faizi</th>
+                {['İcraçı','Şöbə','Ümumi','İcra olunub','Gözləmədə','Rədd edilib','Davam edir','Başlanmayıb','Vaxtı keçmiş','İcra faizi'].map((h,i) => (
+                  <th key={i} style={{ background: '#1e3a5f', color: '#fff', textAlign: i >= 2 ? 'center' : undefined, padding: '6px 10px', fontSize: '.78rem', fontWeight: 700, border: '1px solid rgba(255,255,255,.15)', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
